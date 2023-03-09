@@ -18,9 +18,21 @@ GPT-3 or Flan-T5
 
 
 
+Get the key from here: 
+
+[OPENAI API KEY]:https://platform.openai.com/account/api-keys
+
+In the terminal: 
+
+```bash
+export OPENAI_API_KEY=<API-KEY>
+```
 
 
-## Task 3: 
 
-ECPE as a multi-span extractive question-answering 
+
+
+## Task 3:
+
+ECPE as a multi-span extractive question-answering problem 
 
