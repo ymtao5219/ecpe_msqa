@@ -6,9 +6,7 @@ CS685 NLP Project in Spring 2023 at Umass
 
 ## Task 1:
 
-Replication of this work: 
-
-[ECPE-MLL]:https://github.com/NUSTM/ECPE-MLL
+Replication of this work: https://github.com/NUSTM/ECPE-MLL
 
 
 
@@ -18,9 +16,7 @@ GPT-3 or Flan-T5
 
 
 
-Get the key from here: 
-
-[OPENAI API KEY]:https://platform.openai.com/account/api-keys
+Get the key from here: https://platform.openai.com/account/api-keys
 
 In the terminal: 
 
