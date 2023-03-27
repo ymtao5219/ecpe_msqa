@@ -93,9 +93,13 @@ class MyDataset(Dataset):
         data_list = read_json(data_file)
         for doc in data_list:
             doc_id = doc['doc_id']
+            # number of sentences in the document
             doc_len = doc['doc_len']
+            # emotion cause pairs, list of lists
             doc_couples = doc['pairs']
+            # tuples
             doc_emotions, doc_causes = zip(*doc_couples)
+            # collect all doc_id in a batch in lists
             doc_id_list.append(doc_id)
             doc_len_list.append(doc_len)
             doc_couples = list(map(lambda x: list(x), doc_couples))
@@ -115,8 +119,10 @@ class MyDataset(Dataset):
                 assert int(clause_id) == i + 1
                 doc_str += '[CLS] ' + clause['clause'] + ' [SEP] '
 
+            # '[CLS] 6月6日 [SEP] [CLS] 黄某出差到江门市新会区 [SEP] [CLS] 需半个月才能回广州 [SEP] [CLS] 她将这个消息在网上告诉了钟小枫 [SEP] [CLS] 6月9日 [SEP] [CLS] 钟小枫联系黄某 [SEP] [CLS] 称出差到香港 [SEP] [CLS] 打算购买黄金项链钻石戒指等物品 [SEP] [CLS] 准备向黄某求婚 [SEP] [CLS] 黄某兴奋不已 [SEP] '
             indexed_tokens = self.bert_tokenizer.encode(doc_str.strip(), add_special_tokens=False)
 
+            # 101 stands for [CLS], 102 stands for [SEP]
             clause_indices = [i for i, x in enumerate(indexed_tokens) if x == 101]
             doc_token_len = len(indexed_tokens)
 
@@ -211,7 +217,7 @@ def bert_batch_preprocessing(batch):
            np.array(y_emotions_b), np.array(y_causes_b), np.array(y_mask_b), doc_couples_b, doc_id_b, \
            bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b
 
-
+#########################################################################################################
 def pad_docs(doc_len_b, y_emotions_b, y_causes_b):
     max_doc_len = max(doc_len_b)
 
