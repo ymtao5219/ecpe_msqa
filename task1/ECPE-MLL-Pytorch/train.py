@@ -49,6 +49,8 @@ def main(configs):
                       configs.model_iter_num)
     
     print(model)
+    # x_bert, x_mask_bert, x_type_bert, s_idx_bert, x, sen_len, doc_len, is_training
+    a,b,c,d = model(doc_len_b, adj_b, y_emotions_b, y_causes_b, y_mask_b, doc_couples_b, doc_id_b,)
 if __name__ == "__main__":
     config = Config()
     
