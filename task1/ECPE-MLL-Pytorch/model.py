@@ -35,7 +35,7 @@ class EmoCausePrediction(nn.Module):
         self.fc = nn.Linear(input_size, num_classes)
 
     def forward(self, x):
-        x = nn.functional.dropout(x, p=0.5, training=self.training)
+        x = nn.functional.dropout(x, p=0.5)
         return torch.softmax(self.fc(x), dim=-1)
 
 class ISMLModel(nn.Module):
