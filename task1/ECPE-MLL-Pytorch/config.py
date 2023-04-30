@@ -9,6 +9,8 @@ TEST_FILE  = 'fold%s_test.json'
 class Config:
     def __init__(self):
         ## input struct ##
+        self.model_name = "bert-base-chinese"
+        self.bert_cache_path = 'bert_base_chinese/'
         self.max_sen_len = 30
         self.max_doc_len = 75
         self.max_doc_len_bert = 350
@@ -21,8 +23,7 @@ class Config:
         ## For Training ##
         self.start_fold = 1
         self.end_fold = 11
-        self.split = 'split10'
-        self.model_name = 'bert-base-chinese'
+        self.split = 'split20'
         self.batch_size = 8
         self.learning_rate = 2e-5
         self.keep_prob1 = 0.5
