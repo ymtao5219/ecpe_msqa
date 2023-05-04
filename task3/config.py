@@ -1,34 +1,38 @@
 import torch
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 TORCH_SEED = 129
-DATA_DIR = 'data_json'
+DATA_DIR = '../../data_json'
 TRAIN_FILE = 'fold%s_train.json'
 VALID_FILE = 'fold%s_valid.json'
 TEST_FILE  = 'fold%s_test.json'
 
-# Storing all clauses containing sentimental word, based on the ANTUSD lexicon 'opinion_word_simplified.csv'. see https://academiasinicanlplab.github.io
-SENTIMENTAL_CLAUSE_DICT = 'sentimental_clauses.pkl'
-
-
-class Config(object):
+class Config:
     def __init__(self):
-        self.split = 'split10'
+        ## input struct ##
+        self.model_name = "bert-base-chinese"
+        self.bert_cache_path = 'bert_base_chinese/'
+        self.max_sen_len = 30
+        self.max_doc_len = 75
+        self.max_doc_len_bert = 350
+        ## model struct ##
+        self.model_iter_num = 1
+        self.model_type = 'Inter-EC'
+        self.window_size = 3
+        self.n_hidden = 100
+        self.n_class = 2
+        ## For Training ##
+        self.start_fold = 1
+        self.end_fold = 11
+        self.split = 'split20'
+        self.batch_size = 8
+        self.learning_rate = 2e-5
+        self.keep_prob1 = 0.5
+        self.keep_prob2 = 1.0
+        self.l2_reg = 1e-5
+        self.emo = 1.0
+        self.cause = 1.0
+        self.pair = 1.0
+        self.threshold = 0.5
+        self.training_iter = 20
+        self.log_file_name = ''
 
-        self.bert_cache_path = 'bert-base-chinese'
-        self.feat_dim = 768
-
-        self.gnn_dims = '192'
-        self.att_heads = '4'
-        self.K = 12
-        self.pos_emb_dim = 50
-        self.pairwise_loss = False
-
-        self.epochs = 15
-        self.lr = 1e-5
-        self.batch_size = 2
-        self.gradient_accumulation_steps = 2
-        self.dp = 0.1
-        self.l2 = 1e-5
-        self.l2_bert = 0.01
-        self.warmup_proportion = 0.1
-        self.adam_epsilon = 1e-8
