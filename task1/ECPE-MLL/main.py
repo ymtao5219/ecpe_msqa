@@ -5,7 +5,7 @@
 
 import numpy as np
 import tensorflow as tf
-from sklearn.model_selection import KFold
+# from sklearn.model_selection import KFold
 import sys, os, time, pdb
 sys.path.append('./bert')
 sys.path.append('./utils')
@@ -43,7 +43,7 @@ tf.app.flags.DEFINE_float('threshold', 0.5, 'threshold for pair ext.')
 tf.app.flags.DEFINE_integer('training_iter', 20, 'number of training iter') # for Bert
 tf.app.flags.DEFINE_string('log_file_name', '', 'name of log file')
 
-    
+#########################################################################    
 def build_subtasks(x_bert, x_mask_bert, x_type_bert, s_idx_bert, x, sen_len, doc_len, is_training):
     def get_bert_s(x_bert, x_mask_bert, x_type_bert, s_idx_bert, is_training, feature_mask, scope='bert'):
         bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_base_dir + 'bert_config.json')
@@ -149,6 +149,7 @@ def build_subtasks(x_bert, x_mask_bert, x_type_bert, s_idx_bert, x, sen_len, doc
 
 
     return emo_list, cause_list, s_emo, s_cause, reg
+#########################################################################
 
 def build_model(word_embedding, x_bert, x_mask_bert, x_type_bert, s_idx_bert, x, sen_len, doc_len, is_training):
     x = tf.nn.embedding_lookup(word_embedding, x)
@@ -179,7 +180,7 @@ def build_model(word_embedding, x_bert, x_mask_bert, x_type_bert, s_idx_bert, x,
     reg += reg_tmp
         
     return emo_list, cause_list, pred_pair_row, pred_pair_col, reg
-
+#########################################################################
 def print_info():
     print('\n\n>>>>>>>>>>>>>>>>>>>>MODEL INFO:')
     print('model_type {} \nwindow_size {} \nbert_base_dir {} \nmodel_iter_num {}'.format(
@@ -190,7 +191,7 @@ def print_info():
         FLAGS.batch_size,  FLAGS.learning_rate, FLAGS.keep_prob1, FLAGS.keep_prob2, FLAGS.l2_reg))
     print('FLAGS.emo {} \nFLAGS.cause {} \nFLAGS.pair {} \nthreshold {} \ntraining_iter {}\n\n'.format(
         FLAGS.emo,  FLAGS.cause, FLAGS.pair, FLAGS.threshold, FLAGS.training_iter))
-
+#########################################################################
 class Dataset(object):
     def __init__(self, data_file_name, tokenizer, word_id_mapping):
         doc_id, y_emotion, y_cause, y_pair_row, y_pair_col, y_pairs, x_bert, x_mask_bert, x_type_bert, s_idx_bert, x, sen_len, doc_len, pair_left_cnt = load_data_bert_hier(data_file_name, tokenizer, word_id_mapping, FLAGS.max_doc_len, FLAGS.max_sen_len, FLAGS.window_size, FLAGS.max_doc_len_bert)
@@ -199,13 +200,13 @@ class Dataset(object):
         self.x_bert, self.x_mask_bert, self.x_type_bert, self.s_idx_bert = x_bert, x_mask_bert, x_type_bert, s_idx_bert
         self.x, self.sen_len, self.doc_len = x, sen_len, doc_len
         self.pair_left_cnt = pair_left_cnt
-
+#########################################################################
 def get_batch_data(dataset, is_training, batch_size, test=False):
     ds = dataset
     for index in batch_index(len(ds.y_cause), batch_size, test):
         feed_list = [ds.x_bert[index], ds.x_mask_bert[index], ds.x_type_bert[index], ds.s_idx_bert[index], ds.x[index], ds.sen_len[index], ds.doc_len[index], is_training, ds.y_emotion[index], ds.y_cause[index], ds.y_pair_row[index], ds.y_pair_col[index]]
         yield feed_list, len(index)
-
+#########################################################################
 def run():
     if FLAGS.log_file_name:
         if not os.path.exists('log'):
@@ -235,7 +236,8 @@ def run():
     
     emo_list, cause_list, pred_pair_row, pred_pair_col, reg = build_model(word_embedding, x_bert, x_mask_bert, x_type_bert, s_idx_bert, x, sen_len, doc_len, is_training)
     print('build model done!\n')
-
+    
+    # calculating loss 
     loss_emo, loss_cause = [0.]*2
     for i in range(len(emo_list)):
         loss_emo += - tf.reduce_sum(y_emotion * tf.log(emo_list[i])) / tf.cast(tf.reduce_sum(y_emotion), dtype=tf.float32)
@@ -285,8 +287,9 @@ def run():
     pred_y_emo_op = tf.argmax(pred_emo, 2)
     true_y_cause_op = tf.argmax(y_cause, 2)
     pred_y_cause_op = tf.argmax(pred_cause, 2)
-
+    ##########################################
     # Training Code Block
+    ##########################################
     print_info()
     tf_config = tf.ConfigProto()  
     tf_config.gpu_options.allow_growth = True
@@ -447,7 +450,7 @@ def run():
         print('############# Evaluation on Test ############# ')
         finnal_output(te_emo_cause_list, te_pair_list)
         print_time()
-     
+#########################################################################
 
 def main(_):
     tf.logging.set_verbosity(tf.logging.INFO) # for Bert
