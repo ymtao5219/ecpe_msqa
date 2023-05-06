@@ -10,6 +10,8 @@ from transformers import BertTokenizer
 from config import *
 import json
 
+import ipdb
+
 torch.manual_seed(TORCH_SEED)
 torch.cuda.manual_seed_all(TORCH_SEED)
 torch.backends.cudnn.deterministic = True
@@ -42,8 +44,18 @@ class MyDataset(Dataset):
         self.batch_size = configs.batch_size
         self.epochs = configs.epochs
 
-        self.bert_tokenizer = BertTokenizer.from_pretrained(configs.bert_cache_path)
+        self.bert_tokenizer = BertTokenizer.from_pretrained(configs.model_name)
 
+        # for each document, we have:
+        # doc_couples_list: ground truth emotion cause pairs, list of lists
+        # y_emotions_list: ground truth emotion labels for each sentence, list of lists
+        # y_causes_list: ground truth cause labels for each sentence, list of lists
+        # doc_len_list: number of sentences, list
+        # doc_id_list: document ids, list
+        # bert_token_idx_list: token_ids, list of lists
+        # bert_clause_idx_list: [CLS] token_ids, list of lists
+        # bert_segments_idx_list: segment_ids, list of lists
+        # bert_token_lens_list: number of tokens, list
         self.doc_couples_list, self.y_emotions_list, self.y_causes_list, \
         self.doc_len_list, self.doc_id_list, \
         self.bert_token_idx_list, self.bert_clause_idx_list, self.bert_segments_idx_list, \
@@ -81,9 +93,13 @@ class MyDataset(Dataset):
         elif data_type == 'test':
             data_file = self.test_file
 
+        # document ids
         doc_id_list = []
+        # number of sentences in the document
         doc_len_list = []
+        # emotion cause pairs, list of lists
         doc_couples_list = []
+        
         y_emotions_list, y_causes_list = [], []
         bert_token_idx_list = []
         bert_clause_idx_list = []
@@ -92,6 +108,7 @@ class MyDataset(Dataset):
 
         data_list = read_json(data_file)
         for doc in data_list:
+            # record document id
             doc_id = doc['doc_id']
             # number of sentences in the document
             doc_len = doc['doc_len']
@@ -105,6 +122,7 @@ class MyDataset(Dataset):
             doc_couples = list(map(lambda x: list(x), doc_couples))
             doc_couples_list.append(doc_couples)
 
+            # clause-level labels
             y_emotions, y_causes = [], []
             doc_clauses = doc['clauses']
             doc_str = ''
@@ -118,12 +136,14 @@ class MyDataset(Dataset):
                 clause_id = clause['clause_id']
                 assert int(clause_id) == i + 1
                 doc_str += '[CLS] ' + clause['clause'] + ' [SEP] '
-
-            # '[CLS] 6月6日 [SEP] [CLS] 黄某出差到江门市新会区 [SEP] [CLS] 需半个月才能回广州 [SEP] [CLS] 她将这个消息在网上告诉了钟小枫 [SEP] [CLS] 6月9日 [SEP] [CLS] 钟小枫联系黄某 [SEP] [CLS] 称出差到香港 [SEP] [CLS] 打算购买黄金项链钻石戒指等物品 [SEP] [CLS] 准备向黄某求婚 [SEP] [CLS] 黄某兴奋不已 [SEP] '
+            
+            # bert tokenization
             indexed_tokens = self.bert_tokenizer.encode(doc_str.strip(), add_special_tokens=False)
 
             # 101 stands for [CLS], 102 stands for [SEP]
+            # get index for [CLS] token in the tokenized sequence
             clause_indices = [i for i, x in enumerate(indexed_tokens) if x == 101]
+            # number of tokens in the document
             doc_token_len = len(indexed_tokens)
 
             segments_ids = []
@@ -136,6 +156,8 @@ class MyDataset(Dataset):
                 else:
                     segments_ids.extend([1] * semgent_len)
 
+            # segments_ids: 0 for [CLS] and the first sentence, 1 for the second sentence, and then interleave 
+            # ipdb.set_trace()
             assert len(clause_indices) == doc_len
             assert len(segments_ids) == len(indexed_tokens)
             bert_token_idx_list.append(indexed_tokens)
@@ -145,7 +167,7 @@ class MyDataset(Dataset):
 
             y_emotions_list.append(y_emotions)
             y_causes_list.append(y_causes)
-
+        
         return doc_couples_list, y_emotions_list, y_causes_list, doc_len_list, doc_id_list, \
                bert_token_idx_list, bert_clause_idx_list, bert_segments_idx_list, bert_token_lens_list
 
