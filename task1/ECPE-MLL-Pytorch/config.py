@@ -28,6 +28,7 @@ class Config:
         self.learning_rate = 2e-5
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
+        self.EPOCHS = 1
         self.l2_reg = 1e-5
         self.emo = 1.0
         self.cause = 1.0
@@ -35,4 +36,7 @@ class Config:
         self.threshold = 0.5
         self.training_iter = 20
         self.log_file_name = ''
+        
+        self.gradient_accumulation_steps = 2
+        self.warmup_proportion = 0.1
 

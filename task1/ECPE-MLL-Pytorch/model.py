@@ -138,8 +138,15 @@ class ISMLBlock(nn.Module):
 
 
 class Network(nn.Module):
-    def __init__(self, model_name="bert-base-chinese", max_sen_len=30, max_doc_len=75, max_doc_len_bert=350,
-                 model_iter_num=1, model_type='Inter-EC', window_size=3, n_hidden=100, n_class=2):
+    def __init__(self, model_name="bert-base-chinese", 
+                       max_sen_len=30, 
+                       max_doc_len=75, 
+                       max_doc_len_bert=350,
+                       model_iter_num=3, 
+                       window_size=3, 
+                       n_hidden=100, 
+                       n_class=2):
+        
         super(Network, self).__init__()
 
         self.max_doc_len = max_doc_len
@@ -149,6 +156,7 @@ class Network(nn.Module):
         self.bert = PretrainedBERT(model_name)
         self.biLSTM = BiLSTM(768, n_hidden, 1)
         self.word_attention = WordAttention(n_hidden)
+        self.isml_block = ISMLBlock(model_iter_num, max_doc_len, n_hidden)
 
     def forward(self, bert_token_b, bert_segment_b, bert_masks_b,
                 bert_clause_b):
@@ -156,7 +164,9 @@ class Network(nn.Module):
         x = self.bert(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
         x = self.biLSTM(x)
         x = self.word_attention(x)
-        # ipdb.set_trace()
+        x = input_padding(x)
+
+        x = self.isml_block(x)
         return x
 
 #####################################################################################################

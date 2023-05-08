@@ -1,6 +1,8 @@
 
 import torch 
 from config import *
+import ipdb
+
 batch_size = 8
 device = DEVICE
 
@@ -16,18 +18,19 @@ lamb_2 = 1
 lamb_3 = 1
 l2 = 1e-5
 lr = 5e-3
-dropout = 0.5
+
 
 def labelTransform(doc_couples_b):
+    batch_size = len(doc_couples_b)
     y_e_isml = torch.zeros(batch_size, D, 2)
     y_c_isml = torch.zeros(batch_size, D, 2)
-
+    
     for i in range(batch_size):
         for emo,cau in doc_couples_b[i]:
             # print(emo,cau)
             y_e_isml[i][emo-1][0] = 1 # the True prob is col 0 and the False prob is col 1
             y_c_isml[i][cau-1][0] = 1
-
+    # ipdb.set_trace()
     y_e_isml.to(device=device)
     y_c_isml.to(device=device)
 
@@ -48,6 +51,7 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask)
     y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(doc_couples_b)
 
     loss_isml = 0
+    # ipdb.set_trace()
     for n in range(N):  # can accelerate by n times with full vectorization
         # print(y_e_isml.shape,y_e_list[n].shape)
         loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])))\
