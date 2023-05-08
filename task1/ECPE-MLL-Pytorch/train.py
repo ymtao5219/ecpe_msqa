@@ -80,7 +80,6 @@ def train_loop(configs, model, train_loader):
 
     return running_loss / len(train_loader)
 
-    
 def eval_loop(configs, model, val_loader):
     with torch.no_grad():
         model.eval()
@@ -158,6 +157,8 @@ def main():
         print(f'Epoch {epoch}/{EPOCHS}, Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}')
     
     # test loop
+    test_loss = eval_loop(configs, model, test_set)
+    print(f'Test Loss: {test_loss:.4f}')
 
 if __name__ == "__main__":
 
