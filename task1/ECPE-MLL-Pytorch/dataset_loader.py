@@ -19,15 +19,21 @@ torch.backends.cudnn.deterministic = True
 
 def build_train_data(configs, fold_id, shuffle=True):
     train_dataset = MyDataset(configs, fold_id, data_type='train')
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=configs.batch_size,
-                                               shuffle=shuffle, collate_fn=bert_batch_preprocessing)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
+                                               batch_size=configs.batch_size,
+                                               drop_last=True,
+                                               shuffle=shuffle, 
+                                               collate_fn=bert_batch_preprocessing)
     return train_loader
 
 
 def build_inference_data(configs, fold_id, data_type):
     dataset = MyDataset(configs, fold_id, data_type)
-    data_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=configs.batch_size,
-                                              shuffle=False, collate_fn=bert_batch_preprocessing)
+    data_loader = torch.utils.data.DataLoader(dataset=dataset, 
+                                              batch_size=configs.batch_size,
+                                              drop_last=True,
+                                              shuffle=False, 
+                                              collate_fn=bert_batch_preprocessing)
     return data_loader
 
 

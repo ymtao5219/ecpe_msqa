@@ -28,7 +28,7 @@ class Config:
         self.learning_rate = 2e-5
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
-        self.EPOCHS = 1
+        self.EPOCHS = 3
         self.l2_reg = 1e-5
         self.emo = 1.0
         self.cause = 1.0

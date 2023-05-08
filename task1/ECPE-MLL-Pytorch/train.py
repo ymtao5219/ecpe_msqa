@@ -39,7 +39,7 @@ def train_loop(configs, train_loader):
     
     for epoch in range(1, EPOCHS + 1):
         running_loss = 0.0
-        for train_step, batch in enumerate(train_loader):
+        for train_step, batch in enumerate(train_loader, 1):
 
             doc_len_b, adj_b, y_emotions_b, y_causes_b, y_mask_b, doc_couples_b, doc_id_b, \
             bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b = batch
@@ -69,7 +69,7 @@ def train_loop(configs, train_loader):
         # Calculate average loss for the epoch
         epoch_loss = running_loss / len(train_loader)
         loss_history.append(epoch_loss)
-        print(f'Epoch {epoch + 1}/{EPOCHS}, Loss: {epoch_loss:.4f}')
+        print(f'Epoch {epoch}/{EPOCHS}, Loss: {epoch_loss:.4f}')
     ipdb.set_trace()
     return model, eml_out, eml_out
 
@@ -123,7 +123,8 @@ def main():
     # load data 
     configs = Config()
     train_set, val_set, test_set = load_data(configs)
-
+    # print(len(train_set))
+    # ipdb.set_trace()
     # train loop 
     model, cml_out, eml_out = train_loop(configs, train_set)    
     

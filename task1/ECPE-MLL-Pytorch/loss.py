@@ -21,7 +21,7 @@ lr = 5e-3
 
 
 def labelTransform(doc_couples_b):
-    batch_size = len(doc_couples_b)
+    # batch_size = len(doc_couples_b)
     y_e_isml = torch.zeros(batch_size, D, 2)
     y_c_isml = torch.zeros(batch_size, D, 2)
     
@@ -33,7 +33,6 @@ def labelTransform(doc_couples_b):
     # ipdb.set_trace()
     y_e_isml.to(device=device)
     y_c_isml.to(device=device)
-
 
     y_cml_pairs = torch.zeros(batch_size,D,D)
     y_eml_pairs = torch.zeros(batch_size,D,D)
