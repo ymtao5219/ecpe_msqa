@@ -6,18 +6,14 @@ import ipdb
 batch_size = 8
 device = DEVICE
 
-print_every = 100   # Constant to control how frequently we print train loss
-N = 2               # the repeating block number of ISML, should be >= 1
-D = 75
-hidden_size = 100
-# emb_length = 200
-batch_size = 8
-W = 3
-lamb_1 = 1
-lamb_2 = 1
-lamb_3 = 1
-l2 = 1e-5
-lr = 5e-3
+configs = Config()
+N = configs.model_iter_num              # the repeating block number of ISML, should be >= 1
+D = configs.max_doc_len
+hidden_size = configs.n_hidden
+batch_size = configs.batch_size
+lamb_1 = configs.lamb_1
+lamb_2 = configs.lamb_2
+lamb_3 = configs.lamb_3
 
 
 def labelTransform(doc_couples_b):

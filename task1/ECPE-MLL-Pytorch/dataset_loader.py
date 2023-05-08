@@ -227,7 +227,6 @@ def bert_batch_preprocessing(batch):
     bert_token_b, bert_segment_b, bert_clause_b, bert_token_lens_b = zip(*batch)
 
     y_mask_b, y_emotions_b, y_causes_b = pad_docs(doc_len_b, y_emotions_b, y_causes_b)
-    adj_b = pad_matrices(doc_len_b)
     bert_token_b = pad_sequence(bert_token_b, batch_first=True, padding_value=0)
     bert_segment_b = pad_sequence(bert_segment_b, batch_first=True, padding_value=0)
     bert_clause_b = pad_sequence(bert_clause_b, batch_first=True, padding_value=0)
@@ -241,9 +240,11 @@ def bert_batch_preprocessing(batch):
     assert bert_segment_b.shape == bert_token_b.shape
     assert bert_segment_b.shape == bert_masks_b.shape
 
-    return np.array(doc_len_b), np.array(adj_b), \
-           np.array(y_emotions_b), np.array(y_causes_b), np.array(y_mask_b), doc_couples_b, doc_id_b, \
-           bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b
+    return np.array(doc_len_b), np.array(y_emotions_b), \
+           np.array(y_causes_b), np.array(y_mask_b), \
+           doc_couples_b, doc_id_b, \
+           bert_token_b, bert_segment_b, \
+           bert_masks_b, bert_clause_b
 
 #########################################################################################################
 def pad_docs(doc_len_b, y_emotions_b, y_causes_b):
@@ -261,17 +262,6 @@ def pad_docs(doc_len_b, y_emotions_b, y_causes_b):
 
     return y_mask_b, y_emotions_b_, y_causes_b_
 
-
-def pad_matrices(doc_len_b):
-    N = max(doc_len_b)
-    adj_b = []
-    for doc_len in doc_len_b:
-        adj = np.ones((doc_len, doc_len))
-        adj = sp.coo_matrix(adj)
-        adj = sp.coo_matrix((adj.data, (adj.row, adj.col)),
-                            shape=(N, N), dtype=np.float32)
-        adj_b.append(adj.toarray())
-    return adj_b
 
 
 def pad_list(element_list, max_len, pad_mark):

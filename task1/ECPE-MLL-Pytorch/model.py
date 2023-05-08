@@ -7,8 +7,12 @@ from config import *
 config = Config()
 
 import ipdb
+
+#####################################################################################################
+# Layers
+#####################################################################################################
 class PretrainedBERT(nn.Module):
-    def __init__(self, model_name, freeze=True):
+    def __init__(self, model_name, freeze=False):
         super(PretrainedBERT, self).__init__()
         self.bert = BertModel.from_pretrained(model_name)
 
@@ -25,7 +29,6 @@ class PretrainedBERT(nn.Module):
         dummy = bert_clause_b.unsqueeze(2).expand(bert_clause_b.size(0), bert_clause_b.size(1), hidden_state.size(2))
         doc_sents_h = hidden_state.gather(1, dummy)
         return doc_sents_h
-    
 class BiLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, batch_first=True):
         super(BiLSTM, self).__init__()
@@ -136,7 +139,9 @@ class ISMLBlock(nn.Module):
 
         return self.y_e_list,self.y_c_list,s_tmp,cml_scores,eml_scores
 
-
+#####################################################################################################
+# Whole Model
+#####################################################################################################
 class Network(nn.Module):
     def __init__(self, model_name="bert-base-chinese", 
                        max_sen_len=30, 
