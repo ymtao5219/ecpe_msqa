@@ -3,6 +3,8 @@ import torch.nn as nn
 from transformers import BertModel
 from config import DEVICE
 import torch.nn.functional as F
+from config import *
+config = Config()
 
 import ipdb
 class PretrainedBERT(nn.Module):
@@ -61,13 +63,65 @@ class WordAttention(nn.Module):
 
         return weighted_bilstm_output
 class ISMLBlock(nn.Module):
-    def __init__(self):
+    def __init__(self, N, D, hidden_size):
         super(ISMLBlock, self).__init__()
-        pass 
-    
-    def forward(self):
-        pass
-    
+        self.N = N
+        self.D = D
+        self.hidden_size = hidden_size
+        
+        self.bilstm_e_list = []
+        self.bilstm_c_list = []
+        self.fc_e_list = []
+        self.fc_c_list = []
+        
+        for n in range(N):
+            bilstm_e = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
+                               num_layers= 1, batch_first=True,bidirectional=True)
+            self.bilstm_e_list.append(bilstm_e)
+
+            bilstm_c = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
+                               num_layers= 1, batch_first=True,bidirectional=True)
+            self.bilstm_c_list.append(bilstm_c)
+
+            fc_e = nn.Linear(hidden_size*2,2)
+            # nn.init.kaiming_normal_(fc_e.weight)
+            self.fc_e_list.append(fc_e)
+
+            fc_c = nn.Linear(hidden_size*2,2)
+            # nn.init.kaiming_normal_(fc_c.weight)
+            self.fc_c_list.append(fc_c)
+
+        self.fc_cml = nn.Linear(hidden_size*2,D)
+        self.fc_eml = nn.Linear(hidden_size*2,D)
+
+
+    def forward(self, s1):
+        # scores = None
+        self.y_e_list = []
+        self.y_c_list = []
+        s_tmp = s1
+
+        for n in range(self.N):
+            # print(self.bilstm_e_list[n](s_tmp))
+            e_lstm_out,_ = self.bilstm_e_list[n](s_tmp)
+            y_e = nn.functional.softmax(self.fc_e_list[n](e_lstm_out),dim=2)
+            self.y_e_list.append(y_e)
+
+            c_lstm_out,_ = self.bilstm_c_list[n](s_tmp)
+            y_c = nn.functional.softmax(self.fc_c_list[n](c_lstm_out),dim=2)
+            self.y_c_list.append(y_c)
+
+            s_tmp = torch.cat((s_tmp,y_e,y_c),dim=2)
+            
+            # print('s_tmp shape',s_tmp.shape)
+
+        cml_scores = self.fc_cml(e_lstm_out)
+        eml_scores = self.fc_eml(c_lstm_out)
+
+
+        return self.y_e_list,self.y_c_list,s_tmp,cml_scores,eml_scores
+
+
 class Network(nn.Module):
     def __init__(self, model_name="bert-base-chinese", max_sen_len=30, max_doc_len=75, max_doc_len_bert=350,
                  model_iter_num=1, model_type='Inter-EC', window_size=3, n_hidden=100, n_class=2):
@@ -89,3 +143,20 @@ class Network(nn.Module):
         x = self.word_attention(x)
         # ipdb.set_trace()
         return x
+
+#####################################################################################################
+# helper functions
+#####################################################################################################
+D = config.max_doc_len
+def input_padding(s1,len_target=D):  # D = 75 --> max doc length
+    s1 = torch.nn.functional.pad(s1,(0,0,0,D-s1.shape[1]),value=0)
+    return s1
+
+def slidingmask_gen(D, W, batch_size, device):
+    slidingmask = torch.ones(D,D)  
+    slidingmask = torch.triu(slidingmask,diagonal=-W)  
+    slidingmask = torch.tril(slidingmask,diagonal=W) 
+    slidingmask = slidingmask.repeat(batch_size,1,1)
+    slidingmask.to(device=device)
+    # print(slidingmask)
+    return slidingmask
