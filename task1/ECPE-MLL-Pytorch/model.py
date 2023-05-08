@@ -99,7 +99,22 @@ class ISMLBlock(nn.Module):
         # scores = None
         self.y_e_list = []
         self.y_c_list = []
-        s_tmp = s1
+        # s_tmp = s1
+        
+        s_tmp = s1.to(next(self.parameters()).device)  # move s1 to the same device as the module parameters
+        
+        # move all module parameters to the same device as s1
+        for bilstm_e in self.bilstm_e_list:
+            bilstm_e.to(s1.device)
+        for fc_e in self.fc_e_list:
+            fc_e.to(s1.device)
+        for bilstm_c in self.bilstm_c_list:
+            bilstm_c.to(s1.device)
+        for fc_c in self.fc_c_list:
+            fc_c.to(s1.device)
+        self.fc_cml.to(s1.device)
+        self.fc_eml.to(s1.device)
+
 
         for n in range(self.N):
             # print(self.bilstm_e_list[n](s_tmp))

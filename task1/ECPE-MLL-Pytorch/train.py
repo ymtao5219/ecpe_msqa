@@ -103,7 +103,7 @@ def main(configs):
     s1.to(device=device)
     # print(s1.shape)
     # print(doc_couples_b)
-    ipdb.set_trace()
+    
     N = 2
     D = 75
     model = ISMLBlock(N, D, hidden_size)
@@ -111,14 +111,14 @@ def main(configs):
 
     model.train()
     y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(s1)
-
+    ipdb.set_trace()
     # print(len(y_e_list),len(y_c_list),y_e_list[0].shape,y_c_list[0].shape)
     # print(s1)
     # print(s_final)
     # print(y_e_list)
     # print(y_c_list)
     ipdb.set_trace()
-    loss_total,cml_out,eml_out = loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,sliding_mask)
+    loss_total,cml_out,eml_out = loss_calc(y_e_list[0].cpu(),y_c_list[0].cpu(),doc_couples_b,cml_scores.cpu(),eml_scores.cpu(),sliding_mask.cpu())
     print(loss_total)
     
     with torch.no_grad():
