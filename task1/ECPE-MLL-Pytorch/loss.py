@@ -69,5 +69,6 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask)
     # print(aaa[0])
     
     loss_total = lamb_1 * loss_isml + lamb_2 * loss_cmll + lamb_3 * loss_emll
+    print(f'loss_total:{loss_total:.4f}, loss_isml:{loss_isml:.4f}, loss_cmll:{loss_cmll:.4f},loss_emll:{loss_emll:.4f}')
         
     return loss_total,cml_out,eml_out

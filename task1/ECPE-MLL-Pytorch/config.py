@@ -27,7 +27,7 @@ class Config:
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
         self.EPOCHS = 3
-        self.weight_decay = 1e-5
+        self.weight_decay = 0   #1e-5 in the paper
         self.lamb_1 = 1.0 
         self.lamb_2 = 1.0
         self.lamb_3 = 1.0

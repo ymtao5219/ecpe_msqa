@@ -12,7 +12,7 @@ import ipdb
 # Layers
 #####################################################################################################
 class PretrainedBERT(nn.Module):
-    def __init__(self, model_name, freeze=False):
+    def __init__(self, model_name, freeze=True):
         super(PretrainedBERT, self).__init__()
         self.bert = BertModel.from_pretrained(model_name)
 
