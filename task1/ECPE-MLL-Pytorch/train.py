@@ -11,6 +11,8 @@ import torch.optim as optim
 
 import ipdb 
 
+import tqdm
+
 def load_data(configs):
     if configs.split == 'split10':
         n_folds = 10
@@ -44,6 +46,7 @@ def train_loop(configs, model, train_loader):
     optimizer.zero_grad()
     
     running_loss = 0.0
+    tp_epoch,predict_len_epoch,gt_len_epoch = 0,0,0
     for train_step, batch in enumerate(train_loader, 1):
 
         doc_len_b, y_emotions_b, y_causes_b, y_mask_b, doc_couples_b, doc_id_b, \
@@ -68,9 +71,18 @@ def train_loop(configs, model, train_loader):
                                                 cml_scores.cpu(),
                                                 eml_scores.cpu(),
                                                 sliding_mask.cpu())
+       
+        with torch.no_grad():
+            res = inference(cml_out, eml_out, mode='avg')
+            # todo: calculate metrics
+            tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res)
+            # print(tp,predict_len,gt_len)
+            # ipdb.set_trace()
+
+            tp_epoch += tp
+            predict_len_epoch += predict_len
+            gt_len_epoch += gt_len
         
-        res = inference(cml_out, eml_out, mode='avg')
-        # todo: calculate metrics
         # Backward pass
         loss_total.backward()
         optimizer.step()
@@ -78,12 +90,21 @@ def train_loop(configs, model, train_loader):
 
         running_loss += loss_total.item()
 
-    return running_loss / len(train_loader)
+        # print(batch)
+
+    with torch.no_grad():
+        # metrics
+        precision,recall,f1 = metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch)
+        print(precision,recall,f1)
+        ipdb.set_trace()
+
+    return running_loss / len(train_loader),precision,recall,f1
 
 def eval_loop(configs, model, val_loader):
     with torch.no_grad():
         model.eval()
         running_loss = 0.0
+        tp_epoch,predict_len_epoch,gt_len_epoch = 0,0,0
         for val_step, batch in enumerate(val_loader, 1):
             doc_len_b, y_emotions_b, y_causes_b, y_mask_b, doc_couples_b, doc_id_b, \
             bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b = batch
@@ -110,7 +131,14 @@ def eval_loop(configs, model, val_loader):
             running_loss += loss_total.item()
             res = inference(cml_out, eml_out, mode='avg')
             # todo: calculate metrics
-    return running_loss / len(val_loader)
+            tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res)
+            tp_epoch += tp
+            predict_len_epoch += predict_len
+            gt_len_epoch += gt_len
+
+        precision,recall,f1 = metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch)
+
+    return running_loss / len(val_loader),precision,recall,f1
         
 def inference(cml_out, eml_out, mode='avg'):
     eml_out_T = torch.permute(eml_out, (0,2,1))
@@ -129,7 +157,71 @@ def inference(cml_out, eml_out, mode='avg'):
         out = torch.logical_or(cml_pair, eml_pair)
         out_ind = out.nonzero()
 
+    print(cml_out)
+    print(eml_out)
+    # print(out)
+    # print(out_ind)
+    # ipdb.set_trace()
     return out_ind  # output index pairs: [batch,emo_clause,cause_clase]
+
+def check_accuracy_batch(doc_couples_b,res):
+    # print(doc_couples_b)
+    # print(res)
+    # print(res.shape)
+    # tt = (res[:,0]==0)
+    # print(tt.shape)
+    # batch_ind = res[:,0]
+    # pairs = res[:,1:]
+    # print(pairs)
+    # pairs = pairs + 1      # doc_couples_b starts from 1, while res starts from 0; don't use inplace plus (+=)
+    # print(pairs)
+    # ipdb.set_trace()
+    tp = 0
+    predict_len = 0
+    gt_len = 0
+    for i in range(config.batch_size):
+        target_span = (res[:,0]==i).nonzero()
+        # print(target_span.shape)
+        # target_span = (res[:,0]==0).nonzero()
+        # print(res)
+        # target_span = (res[:,0]==1).nonzero()
+        # print(res)
+        # target_span = (res[:,0]==2).nonzero()
+        # print(res)
+        # ipdb.set_trace()
+        if target_span.shape[0]==0:
+            tp += 0
+            predict_len += 0
+            gt_len += len(doc_couples_b[i])
+        else:
+            # print(target_span[-1][0].item())
+            # print(res)
+            # print(res.shape)
+            # ipdb.set_trace()
+            pairs = res[(target_span[0][0].item()):(target_span[-1][0].item()+1),1:]
+            pairs = pairs + 1
+            # print(pairs)
+            # print(pairs.shape)
+            pairs = pairs.tolist()
+            # print(pairs)
+            # ipdb.set_trace()
+            for target_pair in doc_couples_b[i]:
+                if (target_pair in pairs):
+                    tp += 1
+            predict_len += len(pairs)
+            gt_len += len(doc_couples_b[i])
+            # ipdb.set_trace()
+
+    print(f'tp:{tp},predict_len:{predict_len},gt_len:{gt_len}')
+    # ipdb.set_trace()
+        
+    return tp,predict_len,gt_len
+
+def metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch):
+    precision = tp_epoch/predict_len_epoch
+    recall = tp_epoch/gt_len_epoch
+    f1 = 2 * (precision * recall)/(precision + recall)
+    return precision,recall,f1
 
 def main(): 
     
@@ -151,14 +243,16 @@ def main():
     
     # train loop 
     for epoch in range(1, EPOCHS + 1):
-        train_loss = train_loop(configs, model, train_set)
+        train_loss,precision_train,recall_train,f1_train = train_loop(configs, model, train_set)
         # Calculate average loss for the epoch
-        val_loss = eval_loop(configs, model, val_set)
-        print(f'Epoch {epoch}/{EPOCHS}, Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}')
+        val_loss,precision_val,recall_val,f1_val = eval_loop(configs, model, val_set)
+        print(f'Epoch {epoch}/{EPOCHS}')
+        print(f'Training Loss: {train_loss:.4f}, Precision: {precision_train:.4f}, Recall: {recall_train:.4f}, F1: {f1_train:.4f}')
+        print(f'Validation Loss: {val_loss:.4f}, Precision: {precision_val:.4f}, Recall: {recall_val:.4f}, F1: {f1_val:.4f}')
     
     # test loop
-    test_loss = eval_loop(configs, model, test_set)
-    print(f'Test Loss: {test_loss:.4f}')
+    test_loss,precision_test,recall_test,f1_test = eval_loop(configs, model, test_set)
+    print(f'Test Loss: {test_loss:.4f}, Precision: {precision_test:.4f}, Recall: {recall_test:.4f}, F1: {f1_test:.4f}')
 
 if __name__ == "__main__":
 
