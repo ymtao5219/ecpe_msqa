@@ -14,7 +14,7 @@ batch_size = configs.batch_size
 lamb_1 = configs.lamb_1
 lamb_2 = configs.lamb_2
 lamb_3 = configs.lamb_3
-
+adj_param = configs.adj_param
 
 def labelTransform(doc_couples_b):
     # batch_size = len(doc_couples_b)
@@ -52,21 +52,17 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask)
         loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])))\
                         -torch.sum(torch.mul(y_c_isml,torch.log(y_c_list[n])))
         
-        
     
     cml_out_beforemask = torch.div(1,1+torch.exp(cml_scores))
     eml_out_beforemask = torch.div(1,1+torch.exp(eml_scores))
     loss_cmll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_cml_pairs,torch.log(cml_out_beforemask))\
-                                    +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask)))))
+                                    +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask)) / adj_param )))
     loss_emll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_eml_pairs,torch.log(eml_out_beforemask))\
-                                    +torch.mul(1-y_eml_pairs,torch.log(1-eml_out_beforemask)))))
+                                    +torch.mul(1-y_eml_pairs,torch.log(1-eml_out_beforemask)) / adj_param )))
     
     with torch.no_grad():
-        cml_out = torch.mul(slidingmask,cml_out_beforemask)
-        eml_out = torch.mul(slidingmask,eml_out_beforemask)
-    
-    # aaa = cml_out_beforemask
-    # print(aaa[0])
+        cml_out = torch.mul(slidingmask, cml_out_beforemask)
+        eml_out = torch.mul(slidingmask, eml_out_beforemask)
     
     loss_total = lamb_1 * loss_isml + lamb_2 * loss_cmll + lamb_3 * loss_emll
     print(f'loss_total:{loss_total:.4f}, loss_isml:{loss_isml:.4f}, loss_cmll:{loss_cmll:.4f},loss_emll:{loss_emll:.4f}')

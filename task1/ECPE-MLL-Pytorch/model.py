@@ -29,6 +29,7 @@ class PretrainedBERT(nn.Module):
         dummy = bert_clause_b.unsqueeze(2).expand(bert_clause_b.size(0), bert_clause_b.size(1), hidden_state.size(2))
         doc_sents_h = hidden_state.gather(1, dummy)
         return doc_sents_h
+    
 class BiLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, batch_first=True):
         super(BiLSTM, self).__init__()
@@ -46,25 +47,58 @@ class BiLSTM(nn.Module):
         output, _ = self.bilstm(bert_output)
         # output shape: (batch_size, max_seq_length, 2*hidden_size)
         return output
+    
+# class WordAttention(nn.Module):
+#     def __init__(self, hidden_size):
+#         super(WordAttention, self).__init__()
+#         self.hidden_size = hidden_size
+#         self.attention = nn.Linear(2 * hidden_size, 1)
+
+#     def forward(self, bilstm_output):
+#         # bilstm_output shape: (batch_size, max_seq_length, 2 * hidden_size)
+        
+#         attention_scores = self.attention(bilstm_output)
+#         # attention_scores shape: (batch_size, max_seq_length, 1)
+
+#         attention_weights = torch.softmax(attention_scores, dim=1)
+#         # attention_weights shape: (batch_size, max_seq_length, 1)
+
+#         weighted_bilstm_output = attention_weights * bilstm_output
+#         # weighted_bilstm_output shape: (batch_size, max_seq_length, 2 * hidden_size)
+
+#         return weighted_bilstm_output
+    
 class WordAttention(nn.Module):
     def __init__(self, hidden_size):
         super(WordAttention, self).__init__()
         self.hidden_size = hidden_size
-        self.attention = nn.Linear(2 * hidden_size, 1)
-
-    def forward(self, bilstm_output):
-        # bilstm_output shape: (batch_size, max_seq_length, 2 * hidden_size)
+        self.query = nn.Linear(2 * hidden_size, hidden_size)
+        self.key = nn.Linear(2 * hidden_size, hidden_size)
+        self.value = nn.Linear(2 * hidden_size, hidden_size)
+        self.output = nn.Linear(hidden_size, 2 * hidden_size)  # new output layer
         
-        attention_scores = self.attention(bilstm_output)
-        # attention_scores shape: (batch_size, max_seq_length, 1)
-
-        attention_weights = F.softmax(attention_scores, dim=1)
-        # attention_weights shape: (batch_size, max_seq_length, 1)
-
-        weighted_bilstm_output = attention_weights * bilstm_output
-        # weighted_bilstm_output shape: (batch_size, max_seq_length, 2 * hidden_size)
-
-        return weighted_bilstm_output
+    def forward(self, inputs):
+        # inputs shape: [batch_size, max_seq_length, 2 * hidden_size]
+        
+        # obtain query, key, value from inputs
+        Q = self.query(inputs) # shape: [batch_size, max_seq_length, hidden_size]
+        K = self.key(inputs) # shape: [batch_size, max_seq_length, hidden_size]
+        V = self.value(inputs) # shape: [batch_size, max_seq_length, hidden_size]
+        
+        # calculate attention scores
+        attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.hidden_size).float()) # shape: [batch_size, max_seq_length, max_seq_length]
+        
+        # apply softmax to get attention weights
+        attention_weights = F.softmax(attention_scores, dim=-1) # shape: [batch_size, max_seq_length, max_seq_length]
+        
+        # apply attention weights to values
+        output = torch.matmul(attention_weights, V) # shape: [batch_size, max_seq_length, hidden_size]
+        
+        # project output back to original dimension
+        output = self.output(output)  # shape: [batch_size, max_seq_length, 2 * hidden_size]
+        
+        return output
+    
 class ISMLBlock(nn.Module):
     def __init__(self, N, D, hidden_size):
         super(ISMLBlock, self).__init__()
@@ -159,7 +193,7 @@ class Network(nn.Module):
         self.model_iter_num = model_iter_num
         
         self.bert = PretrainedBERT(model_name)
-        self.biLSTM = BiLSTM(768, n_hidden, 1)
+        self.biLSTM = BiLSTM(768, n_hidden, 4)
         self.word_attention = WordAttention(n_hidden)
         self.isml_block = ISMLBlock(model_iter_num, max_doc_len, n_hidden)
 
