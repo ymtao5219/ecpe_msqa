@@ -10,7 +10,6 @@ from transformers import get_linear_schedule_with_warmup
 import torch.optim as optim
 
 import ipdb 
-
 import tqdm
 
 def load_data(configs):
@@ -43,8 +42,6 @@ def train_loop(configs, model, train_loader):
     
     optimizer = optim.AdamW(model.parameters(), lr=configs.learning_rate, weight_decay=configs.weight_decay) 
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=num_steps_all)
-
-    # optimizer.zero_grad()
     
     running_loss = 0.0
     
@@ -66,16 +63,9 @@ def train_loop(configs, model, train_loader):
             bert_masks_b = bert_masks_b.to(device=device)
             bert_clause_b = bert_clause_b.to(device=device)
             
-            # sliding_mask = slidingmask_gen(D=configs.max_doc_len, 
-            #                                 W=configs.window_size, 
-            #                                 batch_size=configs.batch_size, 
-            #                                 device=device)
-        
-       
-
         y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
         
-        ipdb.set_trace()
+        # ipdb.set_trace()
         loss_total,cml_out,eml_out = loss_calc(y_e_list[0].cpu(),
                                                 y_c_list[0].cpu(),
                                                 doc_couples_b,
@@ -85,12 +75,7 @@ def train_loop(configs, model, train_loader):
         with torch.no_grad():
             res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
             # todo: calculate metrics
-            # tp,predict_len,gt_len = calculate_metrics(doc_couples_b, res, y_mask_b)
-            
             tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res)
-            # print(tp,predict_len,gt_len)
-            # ipdb.set_trace()
-
             tp_epoch += tp
             predict_len_epoch += predict_len
             gt_len_epoch += gt_len
@@ -105,14 +90,10 @@ def train_loop(configs, model, train_loader):
 
         running_loss += loss_total.item()
 
-        # print(batch)
-
     with torch.no_grad():
         # metrics
-        # precision,recall,f1 = metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch)
         precision, recall, f1 = metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch)
         # print(precision,recall,f1)
-        # ipdb.set_trace()
 
     return running_loss / len(train_loader),precision,recall,f1
 
@@ -124,7 +105,6 @@ def eval_loop(configs, model, val_loader):
         for val_step, batch in enumerate(val_loader, 1):
             doc_len_b, y_emotions_b, y_causes_b, y_mask_b, doc_couples_b, doc_id_b, \
             bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b = batch
-            # ipdb.set_trace()
             
             bert_token_b = bert_token_b.to(device=device)
             bert_segment_b = bert_segment_b.to(device=device)
@@ -146,7 +126,6 @@ def eval_loop(configs, model, val_loader):
                                                     sliding_mask.cpu())
             running_loss += loss_total.item()
             res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
-            # tp,predict_len,gt_len = calculate_metrics(doc_couples_b, res, y_mask_b)
             # todo: calculate metrics
             tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res)
             tp_epoch += tp
@@ -154,12 +133,12 @@ def eval_loop(configs, model, val_loader):
             gt_len_epoch += gt_len
 
         precision,recall,f1 = metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch)
-        # print(precision,recall,f1)
+
     return running_loss / len(val_loader),precision,recall,f1
         
 def inference(cml_out, eml_out, y_mask_b,mode='avg'):
     eml_out_T = torch.permute(eml_out, (0,2,1))
-    # print(eml_out_T.shape)
+    # todo: topk
     if mode == 'avg':
         out = ((cml_out + eml_out_T)/2)>0.5
         out_ind = out.nonzero()
@@ -172,13 +151,9 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg'):
         cml_pair = cml_out>0.5
         eml_pair = eml_out_T>0.5
         out = torch.logical_or(cml_pair, eml_pair)
-        # print(cml_out[0])
-        # print(eml_out_T[0])
-        # ipdb.set_trace()
         out_ind = out.nonzero()
 
     # remove prediction out of the range of sentences
-    # print(out_ind.shape)
     out_ind = out_ind.tolist()
     for pred in out_ind:
         num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
@@ -186,42 +161,9 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg'):
         if (pred[1] > num_sentences_per_doc[batch_idx]) or (pred[2] > num_sentences_per_doc[batch_idx]):
             out_ind.remove(pred)
     out_ind = torch.tensor(out_ind)
-    # print(out_ind.shape)
     # ipdb.set_trace()
 
     return out_ind  # output index pairs: [batch, emo_clause, cause_clause]
-
-# def calculate_metrics(ground_truth, predictions, y_mask_b):
-#     TP = 0
-#     pred_len = 0
-#     num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
-    
-#     filtered = torch.cat([predictions[(predictions[:, 0] == i) & (predictions[:, 1] <= num_sentences_per_doc[i]) & (predictions[:, 2] <= num_sentences_per_doc[i])] for i in torch.unique(predictions[:, 0])])
-#     pred_len = filtered.shape[0]
-#     ipdb.set_trace()
-#     gt_len = sum(isinstance(i, list) for i in ground_truth)
-    # ipdb.set_trace()
-    
-#     for idx, pred in enumerate(predictions):
-#         col_idx = pred[0]
-        
-#         # If number of predictions is larger than the number of sentences for a document, skip this prediction
-#         if pred[1] > num_sentences_per_doc[col_idx] or pred[2] > num_sentences_per_doc[col_idx]:
-#             continue
-        
-
-        # pred_pairs = {tuple(pred[1:])}
-        # truth_pairs = {tuple(x) for x in ground_truth[col_idx]}
-        # # print("doc id: ", col_idx, "num_sent: ", num_sentences_per_doc[col_idx],  "pred_pairs: ", pred_pairs, "truth_pairs: ", truth_pairs)
-        # TP += len(pred_pairs.intersection(truth_pairs))
-
-    
-    # precision = TP / pred_len if pred_len > 0 else 0
-    # recall = TP / gt_len if gt_len > 0 else 0
-    # f1 = 2 * (precision * recall)/(precision + recall) if precision + recall > 0 else 0
-    # print("precision: ", precision, "recall: ", recall, "f1: ", f1)
-    
-    # return TP, pred_len, gt_len
 
 def check_accuracy_batch(doc_couples_b,res):
     tp = 0

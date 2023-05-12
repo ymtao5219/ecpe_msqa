@@ -9,7 +9,7 @@ config = Config()
 import ipdb
 
 #####################################################################################################
-# Layers
+# Layers/Blocks
 #####################################################################################################
 class PretrainedBERT(nn.Module):
     def __init__(self, model_name, freeze=True):
@@ -76,6 +76,8 @@ class WordAttention(nn.Module):
         self.key = nn.Linear(2 * hidden_size, hidden_size)
         self.value = nn.Linear(2 * hidden_size, hidden_size)
         self.output = nn.Linear(hidden_size, 2 * hidden_size)  # new output layer
+        # todo: add activations 
+        self.relu = nn.ReLU()
         
     def forward(self, inputs):
         # inputs shape: [batch_size, max_seq_length, 2 * hidden_size]
@@ -84,6 +86,10 @@ class WordAttention(nn.Module):
         Q = self.query(inputs) # shape: [batch_size, max_seq_length, hidden_size]
         K = self.key(inputs) # shape: [batch_size, max_seq_length, hidden_size]
         V = self.value(inputs) # shape: [batch_size, max_seq_length, hidden_size]
+        
+        Q = self.relu(Q)
+        K = self.relu(K)
+        V = self.relu(V)
         
         # calculate attention scores
         attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.hidden_size).float()) # shape: [batch_size, max_seq_length, max_seq_length]
@@ -96,8 +102,68 @@ class WordAttention(nn.Module):
         
         # project output back to original dimension
         output = self.output(output)  # shape: [batch_size, max_seq_length, 2 * hidden_size]
+        output = self.relu(output)
         
         return output
+    
+# class WordAttention(nn.Module):
+#     def __init__(self, hidden_size, num_heads=5, dropout_rate=0):
+#         super(WordAttention, self).__init__()
+        
+#         self.num_heads = num_heads
+#         self.dropout_rate = dropout_rate
+        
+#         self.query_layer = nn.Linear(2 * hidden_size, hidden_size)
+#         self.key_layer = nn.Linear(2 * hidden_size, hidden_size)
+#         self.value_layer = nn.Linear(2 * hidden_size, hidden_size)
+        
+#         self.dropout = nn.Dropout(dropout_rate)
+#         self.out_layer = nn.Linear(hidden_size, 2 * hidden_size) # additional layer for matching the output size
+    
+#     def forward(self, queries, keys, values):
+#         # Linear projections
+#         Q = F.relu(self.query_layer(queries))  # (N, T_q, C)
+#         K = F.relu(self.key_layer(keys))  # (N, T_k, C)
+#         V = F.relu(self.value_layer(values))  # (N, T_k, C)
+        
+#         # Split and concat
+#         Q_ = Q.view(-1, Q.shape[1], self.num_heads, Q.shape[2]//self.num_heads).transpose(1, 2).contiguous().view(-1, Q.shape[1], Q.shape[2]//self.num_heads)
+#         K_ = K.view(-1, K.shape[1], self.num_heads, K.shape[2]//self.num_heads).transpose(1, 2).contiguous().view(-1, K.shape[1], K.shape[2]//self.num_heads)
+#         V_ = V.view(-1, V.shape[1], self.num_heads, V.shape[2]//self.num_heads).transpose(1, 2).contiguous().view(-1, V.shape[1], V.shape[2]//self.num_heads)
+
+#         # Multiplication
+#         outputs = torch.bmm(Q_, K_.transpose(1, 2))  # (h*N, T_q, T_k)
+#         outputs = outputs / (K_.shape[-1] ** 0.5)
+        
+#         # Key Masking
+#         key_masks = torch.sign(torch.abs(torch.sum(keys, dim=-1)))  # (N, T_k)
+#         key_masks = key_masks.repeat(self.num_heads, 1)  # (h*N, T_k)
+#         key_masks = key_masks.unsqueeze(1).repeat(1, queries.shape[1], 1)  # (h*N, T_q, T_k)
+
+#         outputs = outputs.masked_fill_(key_masks == 0, -1e9)  # (h*N, T_q, T_k)
+
+#         # Activation
+#         outputs = F.softmax(outputs, dim=-1)  # (h*N, T_q, T_k)
+        
+#         # Query Masking
+#         query_masks = torch.sign(torch.abs(torch.sum(queries, dim=-1)))  # (N, T_q)
+#         query_masks = query_masks.repeat(self.num_heads, 1)  # (h*N, T_q)
+#         query_masks = query_masks.unsqueeze(-1).repeat(1, 1, keys.shape[1])  # (h*N, T_q, T_k)
+        
+#         outputs *= query_masks  # broadcasting. (N, T_q, C)
+
+#         # Dropouts
+#         outputs = self.dropout(outputs)
+#                 # Weighted sum
+#         outputs = torch.bmm(outputs, V_)  # ( h*N, T_q, C/h)
+        
+#         # Restore shape
+#         outputs = outputs.view(-1, self.num_heads, outputs.shape[1], outputs.shape[2]).transpose(1, 2).contiguous().view(-1, outputs.shape[1], outputs.shape[2]*self.num_heads)  # (N, T_q, C)
+
+#         # Rescale output to match the desired size
+#         outputs = self.out_layer(outputs)  # (N, T_q, 2*C)
+
+#         return outputs
     
 class ISMLBlock(nn.Module):
     def __init__(self, N, D, hidden_size):
@@ -133,7 +199,6 @@ class ISMLBlock(nn.Module):
         self.fc_cml = nn.Linear(hidden_size*2,D)
         self.fc_eml = nn.Linear(hidden_size*2,D)
 
-
     def forward(self, s1):
         # scores = None
         self.y_e_list = []
@@ -154,7 +219,6 @@ class ISMLBlock(nn.Module):
         self.fc_cml.to(s1.device)
         self.fc_eml.to(s1.device)
 
-
         for n in range(self.N):
             # print(self.bilstm_e_list[n](s_tmp))
             e_lstm_out,_ = self.bilstm_e_list[n](s_tmp)
@@ -171,7 +235,6 @@ class ISMLBlock(nn.Module):
 
         cml_scores = self.fc_cml(e_lstm_out)
         eml_scores = self.fc_eml(c_lstm_out)
-
 
         return self.y_e_list,self.y_c_list,s_tmp,cml_scores,eml_scores
 
@@ -204,7 +267,7 @@ class Network(nn.Module):
         
         x = self.bert(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
         x = self.biLSTM(x)
-        x = self.word_attention(x)
+        x = self.word_attention(x, x, x)
         x = input_padding(x)
 
         x = self.isml_block(x)
