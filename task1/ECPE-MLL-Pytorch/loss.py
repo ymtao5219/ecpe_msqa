@@ -43,28 +43,38 @@ def labelTransform(doc_couples_b):
     return y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs
 
 def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask):
-    y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(doc_couples_b)
+    with torch.no_grad():
+        y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(doc_couples_b)
 
     loss_isml = 0
     # ipdb.set_trace()
     for n in range(N):  # can accelerate by n times with full vectorization
         # print(y_e_isml.shape,y_e_list[n].shape)
-        loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])))\
-                        -torch.sum(torch.mul(y_c_isml,torch.log(y_c_list[n])))
-        
+        # loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])))\
+        #                 -torch.sum(torch.mul(y_c_isml,torch.log(y_c_list[n])))
+        loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])) + torch.mul(1-y_e_isml,torch.log(1-y_e_list[n])) / adj_param )\
+                        -torch.sum(torch.mul(y_c_isml,torch.log(y_c_list[n])) + torch.mul(1-y_c_isml,torch.log(1-y_c_list[n])) / adj_param )
+    loss_isml /= (torch.numel(y_e_isml[0]) + torch.numel(y_c_isml[0]))
     
     cml_out_beforemask = torch.div(1,1+torch.exp(cml_scores))
     eml_out_beforemask = torch.div(1,1+torch.exp(eml_scores))
     loss_cmll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_cml_pairs,torch.log(cml_out_beforemask))\
-                                    +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask)) / adj_param )))
+                                    +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask)) / adj_param )))\
+                                    / torch.sum(slidingmask[0])
     loss_emll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_eml_pairs,torch.log(eml_out_beforemask))\
-                                    +torch.mul(1-y_eml_pairs,torch.log(1-eml_out_beforemask)) / adj_param )))
+                                    +torch.mul(1-y_eml_pairs,torch.log(1-eml_out_beforemask)) / adj_param )))\
+                                    / torch.sum(slidingmask[0])
     
     with torch.no_grad():
         cml_out = torch.mul(slidingmask, cml_out_beforemask)
         eml_out = torch.mul(slidingmask, eml_out_beforemask)
     
     loss_total = lamb_1 * loss_isml + lamb_2 * loss_cmll + lamb_3 * loss_emll
-    print(f'loss_total:{loss_total:.4f}, loss_isml:{loss_isml:.4f}, loss_cmll:{loss_cmll:.4f},loss_emll:{loss_emll:.4f}')
+    # loss_total = lamb_2 * loss_cmll + lamb_3 * loss_emll
+
+    print(cml_scores)
+    print(eml_scores)
+    print(f'loss_total:{loss_total:.8f}, loss_isml:{loss_isml:.8f}, loss_cmll:{loss_cmll:.8f},loss_emll:{loss_emll:.8f}')
+    # print(f'loss_total:{loss_total:.4f}, loss_isml:no calc, loss_cmll:{loss_cmll:.4f},loss_emll:{loss_emll:.4f}')
         
     return loss_total,cml_out,eml_out

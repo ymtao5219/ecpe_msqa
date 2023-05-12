@@ -106,27 +106,29 @@ class ISMLBlock(nn.Module):
         self.D = D
         self.hidden_size = hidden_size
         
-        self.bilstm_e_list = []
-        self.bilstm_c_list = []
-        self.fc_e_list = []
-        self.fc_c_list = []
+        self.bilstm_e_list = nn.ModuleList([])
+        self.bilstm_c_list = nn.ModuleList([])
+        self.fc_e_list = nn.ModuleList([])
+        self.fc_c_list = nn.ModuleList([])
         
         for n in range(N):
-            bilstm_e = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
-                               num_layers= 1, batch_first=True,bidirectional=True)
-            self.bilstm_e_list.append(bilstm_e)
+            # bilstm_e = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
+            #                    num_layers= 1, batch_first=True,bidirectional=True)
+            self.bilstm_e_list.append(nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
+                               num_layers= 1, batch_first=True,bidirectional=True))
 
-            bilstm_c = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
-                               num_layers= 1, batch_first=True,bidirectional=True)
-            self.bilstm_c_list.append(bilstm_c)
+            # bilstm_c = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
+            #                    num_layers= 1, batch_first=True,bidirectional=True)
+            self.bilstm_c_list.append(nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
+                               num_layers= 1, batch_first=True,bidirectional=True))
 
-            fc_e = nn.Linear(hidden_size*2,2)
+            # fc_e = nn.Linear(hidden_size*2,2)
             # nn.init.kaiming_normal_(fc_e.weight)
-            self.fc_e_list.append(fc_e)
+            self.fc_e_list.append(nn.Linear(hidden_size*2,2))
 
-            fc_c = nn.Linear(hidden_size*2,2)
+            # fc_c = nn.Linear(hidden_size*2,2)
             # nn.init.kaiming_normal_(fc_c.weight)
-            self.fc_c_list.append(fc_c)
+            self.fc_c_list.append(nn.Linear(hidden_size*2,2))
 
         self.fc_cml = nn.Linear(hidden_size*2,D)
         self.fc_eml = nn.Linear(hidden_size*2,D)
@@ -213,7 +215,7 @@ class Network(nn.Module):
 #####################################################################################################
 D = config.max_doc_len
 def input_padding(s1,len_target=D):  # D = 75 --> max doc length
-    s1 = torch.nn.functional.pad(s1,(0,0,0,D-s1.shape[1]),value=0)
+    s1 = torch.nn.functional.pad(s1,(0,0,0,len_target-s1.shape[1]),value=0)
     return s1
 
 def slidingmask_gen(D, W, batch_size, device):
