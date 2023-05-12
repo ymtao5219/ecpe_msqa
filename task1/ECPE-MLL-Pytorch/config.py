@@ -34,7 +34,7 @@ class Config:
         self.threshold = 0.5
         self.log_file_name = ''
         
-        self.adj_param = 30
+        self.adj_param = 100
         self.gradient_accumulation_steps = 2
         self.warmup_proportion = 0.1
 
