@@ -65,6 +65,7 @@ def train_loop(configs, model, train_loader):
         
         y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
         
+        ipdb.set_trace()
         loss_total,cml_out,eml_out = loss_calc(y_e_list[0].cpu(),
                                                 y_c_list[0].cpu(),
                                                 doc_couples_b,
@@ -165,7 +166,12 @@ def inference(cml_out, eml_out, mode='avg'):
 def calculate_metrics(ground_truth, predictions, y_mask_b):
     TP = 0
     pred_len = 0
-    gt_len = 0
+    num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
+    
+    filtered = torch.cat([predictions[(predictions[:, 0] == i) & (predictions[:, 1] <= num_sentences_per_doc[i]) & (predictions[:, 2] <= num_sentences_per_doc[i])] for i in torch.unique(predictions[:, 0])])
+    pred_len = filtered.shape[0]
+    ipdb.set_trace()
+    gt_len = sum(isinstance(i, list) for i in ground_truth)
     # ipdb.set_trace()
     predictions = predictions.tolist()
     num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
@@ -181,9 +187,13 @@ def calculate_metrics(ground_truth, predictions, y_mask_b):
         truth_pairs = {tuple(x) for x in ground_truth[col_idx]}
         # print("doc id: ", col_idx, "num_sent: ", num_sentences_per_doc[col_idx],  "pred_pairs: ", pred_pairs, "truth_pairs: ", truth_pairs)
         TP += len(pred_pairs.intersection(truth_pairs))
-        pred_len += len(pred_pairs)
-        gt_len += len(truth_pairs)
-        
+        # pred_len += len(pred_pairs)
+    
+    precision = TP / pred_len if pred_len > 0 else 0
+    recall = TP / gt_len if gt_len > 0 else 0
+    f1 = 2 * (precision * recall)/(precision + recall) if precision + recall > 0 else 0
+    print("precision: ", precision, "recall: ", recall, "f1: ", f1)
+    
     return TP, pred_len, gt_len
 
 
