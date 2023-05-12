@@ -135,14 +135,34 @@ def eval_loop(configs, model, val_loader):
         precision,recall,f1 = metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch)
 
     return running_loss / len(val_loader),precision,recall,f1
-        
+
+def top_k_values(tensor, k=5):
+    # Get the top 20 values from each row
+    top_values, _ = torch.topk(tensor, k=k, dim=2)
+
+    # Check the dimensions
+    assert top_values.shape == (tensor.shape[0], tensor.shape[1], k)
+
+    # Get the top 20 values from each 50x20 matrix (from each row)
+    top_values, _ = torch.topk(top_values, k=k, dim=1)
+
+    # Check the dimensions
+    assert top_values.shape == (tensor.shape[0], k, k)
+
+    return top_values
+
 def inference(cml_out, eml_out, y_mask_b,mode='avg'):
     eml_out_T = torch.permute(eml_out, (0,2,1))
     # todo: topk
+
+    cml_out = top_k_values(cml_out)
+    eml_out_T = top_k_values(eml_out_T)
+    
     if mode == 'avg':
         out = ((cml_out + eml_out_T)/2)>0.5
         out_ind = out.nonzero()
     elif mode == 'logic_and':
+        # ipdb.set_trace()
         cml_pair = cml_out>0.5
         eml_pair = eml_out_T>0.5
         out = torch.logical_and(cml_pair, eml_pair)

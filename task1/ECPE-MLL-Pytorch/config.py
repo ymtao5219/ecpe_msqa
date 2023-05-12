@@ -10,11 +10,11 @@ class Config:
     def __init__(self):
         ## input struct ##
         self.model_name = "bert-base-chinese"
-        self.max_sen_len = 30
-        self.max_doc_len = 75
-        self.max_doc_len_bert = 350
+        self.max_sen_len = 30 # 30 # max number of tokens per clause
+        self.max_doc_len = 50 # 75 # max number of clauses per document
+        self.max_doc_len_bert = 350 # max number of tokens per document for Bert Model
         ## model struct ##
-        self.model_iter_num = 6
+        self.model_iter_num = 6 # iter num of ISML
         self.window_size = 3
         self.n_hidden = 100
         self.n_class = 2
@@ -23,11 +23,11 @@ class Config:
         self.end_fold = 11
         self.split = 'split20'
 
-        self.batch_size = 48
+        self.batch_size = 36
         self.learning_rate = 0.001 # 0.005 in the paper
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
-        self.EPOCHS = 20
+        self.EPOCHS = 10
         self.weight_decay = 1e-5   #1e-5 in the paper
         self.lamb_1 = 1.0 
         self.lamb_2 = 1.0
