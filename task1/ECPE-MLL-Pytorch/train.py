@@ -82,7 +82,7 @@ def train_loop(configs, model, train_loader):
                                                 eml_scores.cpu(),
                                                 sliding_mask.cpu())
         with torch.no_grad():
-            res = inference(cml_out, eml_out, y_mask_b, mode='avg')
+            res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
             # todo: calculate metrics
             # tp,predict_len,gt_len = calculate_metrics(doc_couples_b, res, y_mask_b)
             
@@ -144,7 +144,7 @@ def eval_loop(configs, model, val_loader):
                                                     eml_scores.cpu(),
                                                     sliding_mask.cpu())
             running_loss += loss_total.item()
-            res = inference(cml_out, eml_out, y_mask_b, mode='avg')
+            res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
             # tp,predict_len,gt_len = calculate_metrics(doc_couples_b, res, y_mask_b)
             # todo: calculate metrics
             tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res)
@@ -171,9 +171,13 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg'):
         cml_pair = cml_out>0.5
         eml_pair = eml_out_T>0.5
         out = torch.logical_or(cml_pair, eml_pair)
+        # print(cml_out[0])
+        # print(eml_out_T[0])
+        # ipdb.set_trace()
         out_ind = out.nonzero()
 
     # remove prediction out of the range of sentences
+    # print(out_ind.shape)
     out_ind = out_ind.tolist()
     for pred in out_ind:
         num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
@@ -181,6 +185,8 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg'):
         if (pred[1] > num_sentences_per_doc[batch_idx]) or (pred[2] > num_sentences_per_doc[batch_idx]):
             out_ind.remove(pred)
     out_ind = torch.tensor(out_ind)
+    # print(out_ind.shape)
+    # ipdb.set_trace()
 
     return out_ind  # output index pairs: [batch, emo_clause, cause_clause]
 
@@ -214,20 +220,25 @@ def check_accuracy_batch(doc_couples_b,res):
     predict_len = 1
     gt_len = 0
     for i in range(config.batch_size):
-        target_span = (res[:,0]==i).nonzero()
-        if target_span.shape[0]==0:
+        if res.shape[0] == 0:
             tp += 0
             predict_len += 0
             gt_len += len(doc_couples_b[i])
         else:
-            pairs = res[(target_span[0][0].item()):(target_span[-1][0].item()+1),1:]
-            pairs = pairs + 1
-            pairs = pairs.tolist()
-            for target_pair in doc_couples_b[i]:
-                if (target_pair in pairs):
-                    tp += 1
-            predict_len += len(pairs)
-            gt_len += len(doc_couples_b[i])
+            target_span = (res[:,0]==i).nonzero()
+            if target_span.shape[0]==0:
+                tp += 0
+                predict_len += 0
+                gt_len += len(doc_couples_b[i])
+            else:
+                pairs = res[(target_span[0][0].item()):(target_span[-1][0].item()+1),1:]
+                pairs = pairs + 1
+                pairs = pairs.tolist()
+                for target_pair in doc_couples_b[i]:
+                    if (target_pair in pairs):
+                        tp += 1
+                predict_len += len(pairs)
+                gt_len += len(doc_couples_b[i])
 
     print(f'tp:{tp},predict_len:{predict_len},gt_len:{gt_len}')
         

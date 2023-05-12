@@ -14,7 +14,7 @@ class Config:
         self.max_doc_len = 75
         self.max_doc_len_bert = 350
         ## model struct ##
-        self.model_iter_num = 3
+        self.model_iter_num = 6
         self.window_size = 3
         self.n_hidden = 100
         self.n_class = 2
@@ -23,7 +23,7 @@ class Config:
         self.end_fold = 11
         self.split = 'split20'
         self.batch_size = 48
-        self.learning_rate = 0.005 # 0.005 in the paper
+        self.learning_rate = 0.001 # 0.005 in the paper
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
         self.EPOCHS = 20
@@ -34,7 +34,7 @@ class Config:
         self.threshold = 0.5
         self.log_file_name = ''
         
-        self.adj_param = 100
+        self.adj_param = 75
         self.gradient_accumulation_steps = 2
         self.warmup_proportion = 0.1
 
