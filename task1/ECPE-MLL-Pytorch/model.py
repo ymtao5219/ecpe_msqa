@@ -15,7 +15,9 @@ class PretrainedBERT(nn.Module):
     def __init__(self, model_name, freeze=True):
         super(PretrainedBERT, self).__init__()
         self.bert = BertModel.from_pretrained(model_name)
-
+        self.linear = nn.Linear(768, 768)
+        self.activation = nn.ReLU()
+        
         if freeze:
             for param in self.bert.parameters():
                 param.requires_grad = False
@@ -28,8 +30,9 @@ class PretrainedBERT(nn.Module):
         # ipdb.set_trace()
         dummy = bert_clause_b.unsqueeze(2).expand(bert_clause_b.size(0), bert_clause_b.size(1), hidden_state.size(2))
         doc_sents_h = hidden_state.gather(1, dummy)
+        doc_sents_h = self.activation(self.linear(doc_sents_h))
         return doc_sents_h
-    
+
 class BiLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, batch_first=True):
         super(BiLSTM, self).__init__()
@@ -53,7 +56,8 @@ class BiLSTM(nn.Module):
 #         super(WordAttention, self).__init__()
 #         self.hidden_size = hidden_size
 #         self.attention = nn.Linear(2 * hidden_size, 1)
-
+#         self.activation = nn.Tanh()
+        
 #     def forward(self, bilstm_output):
 #         # bilstm_output shape: (batch_size, max_seq_length, 2 * hidden_size)
         
@@ -66,6 +70,8 @@ class BiLSTM(nn.Module):
 #         weighted_bilstm_output = attention_weights * bilstm_output
 #         # weighted_bilstm_output shape: (batch_size, max_seq_length, 2 * hidden_size)
 
+#         weighted_bilstm_output = self.activation(weighted_bilstm_output)
+        
 #         return weighted_bilstm_output
     
 class WordAttention(nn.Module):
@@ -127,6 +133,8 @@ class ISMLBlock(nn.Module):
         self.fc_e_list = nn.ModuleList([])
         self.fc_c_list = nn.ModuleList([])
         
+        self.activation = nn.LeakyReLU() #nn.ReLU()
+        
         for n in range(N):
             # bilstm_e = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
             #                    num_layers= 1, batch_first=True,bidirectional=True)
@@ -149,7 +157,7 @@ class ISMLBlock(nn.Module):
         self.fc_cml = nn.Linear(hidden_size*2,D)
         self.fc_eml = nn.Linear(hidden_size*2,D)
 
-    def forward(self, s1):
+    def forward(self, s1, y_mask):
         # scores = None
         self.y_e_list = []
         self.y_c_list = []
@@ -168,22 +176,36 @@ class ISMLBlock(nn.Module):
             fc_c.to(s1.device)
         self.fc_cml.to(s1.device)
         self.fc_eml.to(s1.device)
-
+        mask = input_padding(y_mask)
+        
         for n in range(self.N):
             # print(self.bilstm_e_list[n](s_tmp))
             e_lstm_out,_ = self.bilstm_e_list[n](s_tmp)
             y_e = nn.functional.softmax(self.fc_e_list[n](e_lstm_out),dim=2)
+            # mask_expanded = mask.expand_as(y_e)
+            # y_e = y_e * mask_expanded
             self.y_e_list.append(y_e)
 
             c_lstm_out,_ = self.bilstm_c_list[n](s_tmp)
             y_c = nn.functional.softmax(self.fc_c_list[n](c_lstm_out),dim=2)
+            # mask_expanded = mask.expand_as(y_c)
+            # y_c = y_c * mask_expanded
             self.y_c_list.append(y_c)
 
             s_tmp = torch.cat((s_tmp,y_e,y_c),dim=2)
 
-        cml_scores = self.fc_cml(e_lstm_out)
-        eml_scores = self.fc_eml(c_lstm_out)
-
+        e_lstm_out = self.activation(e_lstm_out)
+        c_lstm_out = self.activation(c_lstm_out)
+        
+        
+        e_lstm_out = e_lstm_out * mask
+        c_lstm_out = c_lstm_out * mask
+        
+        mask = mask * mask.transpose(-1, -2) 
+        cml_scores = self.fc_cml(e_lstm_out) * mask
+        eml_scores = self.fc_eml(c_lstm_out) * mask
+        # ipdb.set_trace()
+        
         return self.y_e_list,self.y_c_list,s_tmp,cml_scores,eml_scores
 
 #####################################################################################################
@@ -211,14 +233,17 @@ class Network(nn.Module):
         self.isml_block = ISMLBlock(model_iter_num, max_doc_len, n_hidden)
 
     def forward(self, bert_token_b, bert_segment_b, bert_masks_b,
-                bert_clause_b):
+                bert_clause_b, y_mask):
         
+        y_mask = torch.tensor(y_mask).to(bert_clause_b.device).unsqueeze(-1)
         x = self.bert(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
+        x = x * y_mask 
         x = self.biLSTM(x)
+        x = x * y_mask
         x = self.word_attention(x)
+        x = x * y_mask
         x = input_padding(x)
-
-        x = self.isml_block(x)
+        x = self.isml_block(x, y_mask)
         return x
 
 #####################################################################################################

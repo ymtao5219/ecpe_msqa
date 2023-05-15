@@ -62,8 +62,8 @@ def train_loop(configs, model, train_loader):
             bert_segment_b = bert_segment_b.to(device=device)
             bert_masks_b = bert_masks_b.to(device=device)
             bert_clause_b = bert_clause_b.to(device=device)
-            
-        y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
+        
+        y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
         
         # ipdb.set_trace()
         loss_total,cml_out,eml_out = loss_calc(y_e_list[0].cpu(),
@@ -80,7 +80,6 @@ def train_loop(configs, model, train_loader):
             predict_len_epoch += predict_len
             gt_len_epoch += gt_len
         
-
         # move the zero grad here
         optimizer.zero_grad()
         # Backward pass
@@ -116,7 +115,7 @@ def eval_loop(configs, model, val_loader):
                                             batch_size=configs.batch_size, 
                                             device=device)
             
-            y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
+            y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
             
             loss_total,cml_out,eml_out = loss_calc(y_e_list[0].cpu(),
                                                     y_c_list[0].cpu(),
@@ -155,8 +154,8 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg'):
     eml_out_T = torch.permute(eml_out, (0,2,1))
     # todo: topk
 
-    cml_out = top_k_values(cml_out)
-    eml_out_T = top_k_values(eml_out_T)
+    # cml_out = top_k_values(cml_out)
+    # eml_out_T = top_k_values(eml_out_T)
     
     if mode == 'avg':
         out = ((cml_out + eml_out_T)/2)>0.5
@@ -204,10 +203,11 @@ def check_accuracy_batch(doc_couples_b,res):
                 pairs = res[(target_span[0][0].item()):(target_span[-1][0].item()+1),1:]
                 pairs = pairs + 1
                 pairs = pairs.tolist()
+                # print("pairs", pairs)
                 for target_pair in doc_couples_b[i]:
                     if (target_pair in pairs):
                         tp += 1
-                predict_len += len(pairs)
+                predict_len += len(pairs) 
                 gt_len += len(doc_couples_b[i])
 
     print(f'tp:{tp},predict_len:{predict_len},gt_len:{gt_len}')
