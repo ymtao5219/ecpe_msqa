@@ -12,18 +12,19 @@ import torch.optim as optim
 import ipdb 
 import tqdm
 
-def load_data(configs):
+def load_data(configs, fold_id=1):
     if configs.split == 'split10':
-        n_folds = 10
+        config.start_fold = 1
+        config.end_fold = 11
         configs.epochs = 20
     elif configs.split == 'split20':
-        n_folds = 20
+        config.start_fold = 1
+        config.end_fold = 21
         configs.epochs = 15
     else:
         print('Unknown data split.')
         exit()
         
-    fold_id = 2
     train_loader = build_train_data(configs, fold_id=fold_id)
     if configs.split == 'split20':
         val_loader = build_inference_data(configs, fold_id=fold_id, data_type='valid')
@@ -84,9 +85,9 @@ def train_loop(configs, model, train_loader):
                                                 eml_scores,
                                                 sliding_mask)
         with torch.no_grad():
-            res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
+            res = inference(cml_out, eml_out, y_mask_b, mode='logic_or')
             # todo: calculate metrics
-            tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res)
+            tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res,y_mask_b)
             tp_epoch += tp
             predict_len_epoch += predict_len
             gt_len_epoch += gt_len
@@ -135,9 +136,9 @@ def eval_loop(configs, model, val_loader):
                                                     eml_scores,
                                                     sliding_mask)
             running_loss += loss_total.item()
-            res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
+            res = inference(cml_out, eml_out, y_mask_b, mode='logic_or')
             # todo: calculate metrics
-            tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res)
+            tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res,y_mask_b)
             tp_epoch += tp
             predict_len_epoch += predict_len
             gt_len_epoch += gt_len
@@ -190,12 +191,15 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg',topk=False):
         batch_idx = pred[0]
         if (pred[1] > num_sentences_per_doc[batch_idx]) or (pred[2] > num_sentences_per_doc[batch_idx]):
             out_ind.remove(pred)
+    # num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
+    # pairs = [pred for pred in pairs if not ((pred[1] > num_sentences_per_doc[batch_idx]) or (pred[2] > num_sentences_per_doc[batch_idx]))]
+
     out_ind = torch.tensor(out_ind)
     # ipdb.set_trace()
 
     return out_ind  # output index pairs: [batch, emo_clause, cause_clause]
 
-def check_accuracy_batch(doc_couples_b,res):
+def check_accuracy_batch(doc_couples_b,res,y_mask_b):
     tp = 0
     predict_len = 1
     gt_len = 0
@@ -211,10 +215,15 @@ def check_accuracy_batch(doc_couples_b,res):
                 predict_len += 0
                 gt_len += len(doc_couples_b[i])
             else:
+                
                 pairs = res[(target_span[0][0].item()):(target_span[-1][0].item()+1),1:]
-                pairs = pairs + 1
+                pairs = pairs + 1 # since the ground truth start from 
                 pairs = pairs.tolist()
-                # print("pairs", pairs)
+
+                num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
+                pairs = [pred for pred in pairs if not ((pred[0] > num_sentences_per_doc[i]) or (pred[1] > num_sentences_per_doc[i]))]
+                # print(f"doc{i}, num of sentences{num_sentences_per_doc[i]}, num of pred_pairs{len(pairs)}")
+                # ipdb.set_trace()
                 for target_pair in doc_couples_b[i]:
                     if (target_pair in pairs):
                         tp += 1
@@ -235,8 +244,6 @@ def main():
     
     # load data 
     configs = Config()
-    train_set, val_set, test_set = load_data(configs)
-
     EPOCHS = configs.EPOCHS
     
     # initilize the model
@@ -250,18 +257,40 @@ def main():
                 n_class=configs.n_class).to(DEVICE)
     
     # train loop 
+    train_losses, val_losses, test_losses = 0.0, 0.0, 0.0
+    precision_sum_train, recall_sum_train, f1_sum_train = 0, 0, 0
+    precision_sum_test, recall_sum_test, f1_sum_test = 0, 0, 0
+    precision_sum_val, recall_sum_val, f1_sum_val = 0, 0, 0
     for epoch in range(1, EPOCHS + 1):
         print(f'============================Epoch {epoch}/{EPOCHS}============================')
-        train_loss,precision_train,recall_train,f1_train = train_loop(configs, model, train_set)
-        # Calculate average loss for the epoch
-        val_loss,precision_val,recall_val,f1_val = eval_loop(configs, model, val_set)
-        print(f'Training Loss: {train_loss:.4f}, Precision: {precision_train:.4f}, Recall: {recall_train:.4f}, F1: {f1_train:.4f}')
-        print(f'Validation Loss: {val_loss:.4f}, Precision: {precision_val:.4f}, Recall: {recall_val:.4f}, F1: {f1_val:.4f}')
+        for fold_id in range(configs.start_fold, configs.end_fold): 
+            train_set, val_set, test_set = load_data(configs, fold_id)
+            train_loss,precision_train,recall_train,f1_train = train_loop(configs, model, train_set)
+            # Calculate average loss for the epoch
+            val_loss,precision_val,recall_val,f1_val = eval_loop(configs, model, val_set)
+            
+            train_losses += train_loss
+            val_losses += val_loss
+            
+            precision_sum_train += precision_train
+            recall_sum_train += recall_train
+            f1_sum_train += f1_train
+            
+            precision_sum_val += precision_val
+            recall_sum_val += recall_val
+            f1_sum_val += f1_sum_val
+            
+        print(f'Training Loss: {train_losses/epoch:.4f}, Precision: {precision_sum_train/epoch:.4f}, Recall: {recall_sum_train/epoch:.4f}, F1: {f1_sum_train/epoch:.4f}')
+        print(f'Validation Loss: {val_losses/epoch:.4f}, Precision: {precision_sum_val/epoch:.4f}, Recall: {recall_sum_val/epoch:.4f}, F1: {f1_sum_val/epoch:.4f}')
     
-    # test loop
-    test_loss,precision_test,recall_test,f1_test = eval_loop(configs, model, test_set)
-    print(f'Test Loss: {test_loss:.4f}, Precision: {precision_test:.4f}, Recall: {recall_test:.4f}, F1: {f1_test:.4f}')
-
+        # test loop
+        test_loss,precision_test,recall_test,f1_test = eval_loop(configs, model, test_set)
+        
+        test_losses += test_loss
+        precision_sum_test += precision_test
+        recall_sum_test += recall_test
+        f1_sum_test += f1_test
+        print(f'Test Loss: {test_losses/epoch:.4f}, Precision: {precision_sum_test/epoch:.4f}, Recall: {recall_sum_test/epoch:.4f}, F1: {f1_sum_test/epoch:.4f}')
 if __name__ == "__main__":
 
     main()
