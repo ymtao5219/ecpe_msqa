@@ -20,6 +20,9 @@ def labelTransform(doc_couples_b):
     # batch_size = len(doc_couples_b)
     y_e_isml = torch.zeros(batch_size, D, 2)
     y_c_isml = torch.zeros(batch_size, D, 2)
+
+    y_e_isml = y_e_isml.to(device=device)
+    y_c_isml = y_c_isml.to(device=device)
     
     for i in range(batch_size):
         for emo,cau in doc_couples_b[i]:
@@ -32,9 +35,6 @@ def labelTransform(doc_couples_b):
     y_c_isml[:,:,1] = (1 - y_c_isml[:,:,0])
     y_e_isml[:,:,0] = y_e_isml[:,:,0] * adj_param
     y_c_isml[:,:,0] = y_c_isml[:,:,0] * adj_param
-    # ipdb.set_trace()
-    y_e_isml.to(device=device)
-    y_c_isml.to(device=device)
 
     y_cml_pairs = torch.zeros(batch_size,D,D)
     y_eml_pairs = torch.zeros(batch_size,D,D)
@@ -43,8 +43,8 @@ def labelTransform(doc_couples_b):
             y_cml_pairs[i][emo-1][cau-1] = 1
             y_eml_pairs[i][cau-1][emo-1] = 1
 
-    y_cml_pairs.to(device=device)
-    y_eml_pairs.to(device=device)
+    y_cml_pairs = y_cml_pairs.to(device=device)
+    y_eml_pairs = y_eml_pairs.to(device=device)
 
     return y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs
 
@@ -52,16 +52,17 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask)
     with torch.no_grad():
         y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(doc_couples_b)
 
+
     loss_isml = 0
-    # ipdb.set_trace()
     for n in range(N):  # can accelerate by n times with full vectorization
-        # print(y_e_isml.shape,y_e_list[n].shape)
         loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])))\
                         -torch.sum(torch.mul(y_c_isml,torch.log(y_c_list[n])))
     loss_isml /= (D*4*N)
     
     cml_out_beforemask = torch.div(1,1+torch.exp(cml_scores))
     eml_out_beforemask = torch.div(1,1+torch.exp(eml_scores))
+    # print(cml_scores.get_device())
+    # ipdb.set_trace()
     loss_cmll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_cml_pairs,torch.log(cml_out_beforemask)) * adj_param\
                                     +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask)))))\
                                     / (D*(2*configs.window_size+1))                 # modify back to "* adj_param"

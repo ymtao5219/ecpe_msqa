@@ -27,7 +27,7 @@ class Config:
         self.learning_rate = 0.001 # 0.005 in the paper
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
-        self.EPOCHS = 10
+        self.EPOCHS = 15
         self.weight_decay = 1e-5   #1e-5 in the paper
         self.lamb_1 = 1.0 
         self.lamb_2 = 1.0
@@ -35,7 +35,7 @@ class Config:
         self.threshold = 0.5
         self.log_file_name = ''
         
-        self.adj_param = 75
+        self.adj_param = 50
         self.gradient_accumulation_steps = 2
         self.warmup_proportion = 0.1
 
