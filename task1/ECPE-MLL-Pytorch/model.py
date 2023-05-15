@@ -158,10 +158,10 @@ class ISMLBlock(nn.Module):
         self.fc_eml = nn.Linear(hidden_size*2,D)
 
     def forward(self, s1, y_mask):
-        # scores = None
         self.y_e_list = []
         self.y_c_list = []
-        # s_tmp = s1
+
+        
         
         s_tmp = s1.to(next(self.parameters()).device)  # move s1 to the same device as the module parameters
         
@@ -176,11 +176,15 @@ class ISMLBlock(nn.Module):
             fc_c.to(s1.device)
         self.fc_cml.to(s1.device)
         self.fc_eml.to(s1.device)
-        mask = input_padding(y_mask)
+
+        with torch.no_grad():
+            mask = input_padding(y_mask)
         
         for n in range(self.N):
             # print(self.bilstm_e_list[n](s_tmp))
             e_lstm_out,_ = self.bilstm_e_list[n](s_tmp)
+            # print(e_lstm_out.get_device())
+            # ipdb.set_trace()
             y_e = nn.functional.softmax(self.fc_e_list[n](e_lstm_out),dim=2)
             # mask_expanded = mask.expand_as(y_e)
             # y_e = y_e * mask_expanded
@@ -196,14 +200,20 @@ class ISMLBlock(nn.Module):
 
         e_lstm_out = self.activation(e_lstm_out)
         c_lstm_out = self.activation(c_lstm_out)
+        # print(e_lstm_out.get_device())
+        # ipdb.set_trace()
         
         
-        e_lstm_out = e_lstm_out * mask
-        c_lstm_out = c_lstm_out * mask
+        # e_lstm_out = e_lstm_out * mask
+        # c_lstm_out = c_lstm_out * mask
         
-        mask = mask * mask.transpose(-1, -2) 
-        cml_scores = self.fc_cml(e_lstm_out) * mask
-        eml_scores = self.fc_eml(c_lstm_out) * mask
+        # mask = mask * mask.transpose(-1, -2) 
+        # cml_scores = self.fc_cml(e_lstm_out) * mask
+        # eml_scores = self.fc_eml(c_lstm_out) * mask
+        cml_scores = self.fc_cml(e_lstm_out)
+        eml_scores = self.fc_eml(c_lstm_out)
+
+        # print(cml_scores.get_device())
         # ipdb.set_trace()
         
         return self.y_e_list,self.y_c_list,s_tmp,cml_scores,eml_scores
@@ -259,6 +269,6 @@ def slidingmask_gen(D, W, batch_size, device):
     slidingmask = torch.triu(slidingmask,diagonal=-W)  
     slidingmask = torch.tril(slidingmask,diagonal=W) 
     slidingmask = slidingmask.repeat(batch_size,1,1)
-    slidingmask.to(device=device)
+    slidingmask = slidingmask.to(device=device)
     # print(slidingmask)
     return slidingmask

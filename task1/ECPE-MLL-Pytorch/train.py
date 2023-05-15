@@ -51,6 +51,8 @@ def train_loop(configs, model, train_loader):
                                         W=configs.window_size, 
                                         batch_size=configs.batch_size, 
                                         device=device)
+        # print(sliding_mask.get_device())
+        # ipdb.set_trace()
 
     for train_step, batch in enumerate(train_loader, 1):
         with torch.no_grad():
@@ -62,16 +64,25 @@ def train_loop(configs, model, train_loader):
             bert_segment_b = bert_segment_b.to(device=device)
             bert_masks_b = bert_masks_b.to(device=device)
             bert_clause_b = bert_clause_b.to(device=device)
+
+            
         
         y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
+
+        # print(y_e_list[0].get_device())
+        # print(y_e_list[0].shape)
+        # print(y_e_list[0])
         
         # ipdb.set_trace()
-        loss_total,cml_out,eml_out = loss_calc(y_e_list[0].cpu(),
-                                                y_c_list[0].cpu(),
+        # print(cml_scores.get_device())
+        # print(sliding_mask.get_device())
+        # ipdb.set_trace()
+        loss_total,cml_out,eml_out = loss_calc(y_e_list,
+                                                y_c_list,
                                                 doc_couples_b,
-                                                cml_scores.cpu(),
-                                                eml_scores.cpu(),
-                                                sliding_mask.cpu())
+                                                cml_scores,
+                                                eml_scores,
+                                                sliding_mask)
         with torch.no_grad():
             res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
             # todo: calculate metrics
@@ -117,12 +128,12 @@ def eval_loop(configs, model, val_loader):
             
             y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
             
-            loss_total,cml_out,eml_out = loss_calc(y_e_list[0].cpu(),
-                                                    y_c_list[0].cpu(),
+            loss_total,cml_out,eml_out = loss_calc(y_e_list,
+                                                    y_c_list,
                                                     doc_couples_b,
-                                                    cml_scores.cpu(),
-                                                    eml_scores.cpu(),
-                                                    sliding_mask.cpu())
+                                                    cml_scores,
+                                                    eml_scores,
+                                                    sliding_mask)
             running_loss += loss_total.item()
             res = inference(cml_out, eml_out, y_mask_b, mode='logic_and')
             # todo: calculate metrics
@@ -150,7 +161,7 @@ def top_k_values(tensor, k=5):
 
     return top_values
 
-def inference(cml_out, eml_out, y_mask_b,mode='avg'):
+def inference(cml_out, eml_out, y_mask_b,mode='avg',topk=False):
     eml_out_T = torch.permute(eml_out, (0,2,1))
     # todo: topk
 
