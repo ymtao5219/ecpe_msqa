@@ -1,6 +1,13 @@
 # Emotion cause pair extraction as a question answering problem
 
-CS685 NLP Project in Spring 2023 at Umass 
+The repository contains code for CS685 NLP Project in Spring 2023 at Umass Amherst. 
+
+## Dependencies: 
+
+- Python 3.7 
+- transformers
+- pytorch
+- Pretrained BERT "chinese-bert-base", which is available from huggingface: https://huggingface.co/bert-base-chinese 
 
 We have three tasks to complete in our project proposal: 
 
@@ -14,7 +21,7 @@ We have three tasks to complete in our project proposal:
   python train.py 
   ```
   - Compute resources: 
-    - We utilize Google Cloud Compute services for model training. The hardware consists of an Intel Skylake CPU platform along with a single NVIDIA T4 GPU (with 16GB of memory). 
+    - We utilize Google Cloud Compute services for model training. The hardware consists of an Intel Skylake CPU (13GB) platform along with a single NVIDIA T4 GPU (with 16GB of memory). 
     - In order to execute our code successfully, it is necessary for the GPU to possess a memory capacity exceeding 8GB.
     
     
