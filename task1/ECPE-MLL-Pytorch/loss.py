@@ -2,6 +2,7 @@
 import torch 
 from config import *
 import ipdb
+import sys
 
 batch_size = 8
 device = DEVICE
@@ -48,7 +49,7 @@ def labelTransform(doc_couples_b):
 
     return y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs
 
-def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,epoch,training=True,alter=False):
+def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,sent_mask,epoch,training=True,alter=False,sent_mask_flag=False):
     with torch.no_grad():
         y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(doc_couples_b)
         if (training == True) and (alter==True):
@@ -65,23 +66,47 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,
             lamb_2 = configs.lamb_2
             lamb_3 = configs.lamb_3
 
+        y_list_mask_single,scores_mask = sent_mask
+
+        # torch.set_printoptions(threshold=sys.maxsize)
+        # print(y_list_mask_single.shape)
+        # print(y_list_mask_single[0])
+        # print(y_list_mask_single[-1])
+        # print(scores_mask.shape)
+        # print(scores_mask[0])
+        # print(scores_mask[-1])
+        # ipdb.set_trace()
+
+
 
     loss_isml = 0
     for n in range(N):  # can accelerate by n times with full vectorization
-        loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])))\
-                        -torch.sum(torch.mul(y_c_isml,torch.log(y_c_list[n])))
+        if sent_mask_flag==True:
+            loss_isml += -torch.sum(torch.mul(y_list_mask_single,torch.mul(y_e_isml,torch.log(y_e_list[n]))))\
+                            -torch.sum(torch.mul(y_list_mask_single,torch.mul(y_c_isml,torch.log(y_c_list[n]))))
+        else:
+            loss_isml += -torch.sum(torch.mul(y_e_isml,torch.log(y_e_list[n])))\
+                            -torch.sum(torch.mul(y_c_isml,torch.log(y_c_list[n])))
     loss_isml /= (D*4*N)
     
     cml_out_beforemask = torch.div(1,1+torch.exp(cml_scores))
     eml_out_beforemask = torch.div(1,1+torch.exp(eml_scores))
     # print(cml_scores.get_device())
     # ipdb.set_trace()
-    loss_cmll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_cml_pairs,torch.log(cml_out_beforemask)) * adj_param\
-                                    +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask)))))\
-                                    / (D*(2*configs.window_size+1))                 # modify back to "* adj_param"
-    loss_emll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_eml_pairs,torch.log(eml_out_beforemask)) * adj_param\
-                                    +torch.mul(1-y_eml_pairs,torch.log(1-eml_out_beforemask)))))\
-                                    / (D*(2*configs.window_size+1))                 # modify back to "* adj_param"
+    if sent_mask_flag==True:
+        loss_cmll = -torch.sum(torch.mul(scores_mask,torch.mul(slidingmask,(torch.mul(y_cml_pairs,torch.log(cml_out_beforemask)) * adj_param\
+                                        +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask))))))\
+                                        / (D*(2*configs.window_size+1))                 # modify back to "* adj_param"
+        loss_emll = -torch.sum(torch.mul(scores_mask,torch.mul(slidingmask,(torch.mul(y_eml_pairs,torch.log(eml_out_beforemask)) * adj_param\
+                                        +torch.mul(1-y_eml_pairs,torch.log(1-eml_out_beforemask))))))\
+                                        / (D*(2*configs.window_size+1))
+    else:
+        loss_cmll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_cml_pairs,torch.log(cml_out_beforemask)) * adj_param\
+                                        +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask)))))\
+                                        / (D*(2*configs.window_size+1))                 # modify back to "* adj_param"
+        loss_emll = -torch.sum(torch.mul(slidingmask,(torch.mul(y_eml_pairs,torch.log(eml_out_beforemask)) * adj_param\
+                                        +torch.mul(1-y_eml_pairs,torch.log(1-eml_out_beforemask)))))\
+                                        / (D*(2*configs.window_size+1))                 # modify back to "* adj_param"
     
     with torch.no_grad():
         cml_out = torch.mul(slidingmask, cml_out_beforemask)
