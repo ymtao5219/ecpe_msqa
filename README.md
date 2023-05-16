@@ -1,34 +1,12 @@
-# ecpe_msqa
+# Emotion cause pair extraction as a question answering problem
 
 CS685 NLP Project in Spring 2023 at Umass 
 
+## Task 1: Replication of this work: https://github.com/NUSTM/ECPE-MLL
 
 
-## Task 1:
-
-Replication of this work: https://github.com/NUSTM/ECPE-MLL
+## Task 2: Evaluting the ECPE task using GPT3.5 
 
 
-
-## Task 2:
-
-GPT-3 or Flan-T5 
-
-
-
-Get the key from here: https://platform.openai.com/account/api-keys
-
-In the terminal: 
-
-```bash
-export OPENAI_API_KEY=<API-KEY>
-```
-
-
-
-
-
-## Task 3:
-
-ECPE as a multi-span extractive question-answering problem 
+## Task 3:ECPE as an extractive question-answering problem 
 
