@@ -48,9 +48,22 @@ def labelTransform(doc_couples_b):
 
     return y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs
 
-def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask):
+def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,epoch,training=True,alter=False):
     with torch.no_grad():
         y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(doc_couples_b)
+        if (training == True) and (alter==True):
+            if (epoch % 4 == 0) or (epoch % 4 == 1):
+                lamb_1 = configs.lamb_1
+                lamb_2 = 0
+                lamb_3 = 0
+            elif (epoch % 4 == 2) or (epoch % 4 == 3):
+                lamb_1 = 0
+                lamb_2 = configs.lamb_2
+                lamb_3 = configs.lamb_3
+        else:
+            lamb_1 = configs.lamb_1
+            lamb_2 = configs.lamb_2
+            lamb_3 = configs.lamb_3
 
 
     loss_isml = 0

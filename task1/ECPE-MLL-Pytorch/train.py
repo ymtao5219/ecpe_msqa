@@ -33,7 +33,7 @@ def load_data(configs, fold_id=1):
     return train_loader, val_loader, test_loader
 
 
-def train_loop(configs, model, train_loader):
+def train_loop(configs, model, train_loader,epoch):
 
     model.train()
 
@@ -83,7 +83,10 @@ def train_loop(configs, model, train_loader):
                                                 doc_couples_b,
                                                 cml_scores,
                                                 eml_scores,
-                                                sliding_mask)
+                                                sliding_mask,
+                                                epoch,
+                                                training=True,
+                                                alter=False)
         with torch.no_grad():
             res = inference(cml_out, eml_out, y_mask_b, mode='logic_or')
             # todo: calculate metrics
@@ -108,7 +111,7 @@ def train_loop(configs, model, train_loader):
 
     return running_loss / len(train_loader),precision,recall,f1
 
-def eval_loop(configs, model, val_loader):
+def eval_loop(configs, model, val_loader,epoch):
     with torch.no_grad():
         model.eval()
         running_loss = 0.0
@@ -134,7 +137,10 @@ def eval_loop(configs, model, val_loader):
                                                     doc_couples_b,
                                                     cml_scores,
                                                     eml_scores,
-                                                    sliding_mask)
+                                                    sliding_mask,
+                                                    epoch,
+                                                    training=False,
+                                                    alter=False)
             running_loss += loss_total.item()
             res = inference(cml_out, eml_out, y_mask_b, mode='logic_or')
             # todo: calculate metrics
@@ -186,18 +192,17 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg',topk=False):
 
     # remove prediction out of the range of sentences
     out_ind = out_ind.tolist()
+    out_ind_filtered = []
+    
+    num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
     for pred in out_ind:
-        num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
         batch_idx = pred[0]
         if (pred[1] > num_sentences_per_doc[batch_idx]) or (pred[2] > num_sentences_per_doc[batch_idx]):
-            out_ind.remove(pred)
-    # num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
-    # pairs = [pred for pred in pairs if not ((pred[1] > num_sentences_per_doc[batch_idx]) or (pred[2] > num_sentences_per_doc[batch_idx]))]
+            continue
+        out_ind_filtered.append(pred)
 
-    out_ind = torch.tensor(out_ind)
-    # ipdb.set_trace()
-
-    return out_ind  # output index pairs: [batch, emo_clause, cause_clause]
+    out_ind_filtered = torch.tensor(out_ind_filtered)
+    return out_ind_filtered  # output index pairs: [batch, emo_clause, cause_clause]
 
 def check_accuracy_batch(doc_couples_b,res,y_mask_b):
     tp = 0
@@ -220,8 +225,9 @@ def check_accuracy_batch(doc_couples_b,res,y_mask_b):
                 pairs = pairs + 1 # since the ground truth start from 
                 pairs = pairs.tolist()
 
-                num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
-                pairs = [pred for pred in pairs if not ((pred[0] > num_sentences_per_doc[i]) or (pred[1] > num_sentences_per_doc[i]))]
+                # num_sentences_per_doc = y_mask_b.sum(axis=1).tolist()
+                # pairs = [pred for pred in pairs if not ((pred[0] > num_sentences_per_doc[i]) or (pred[1] > num_sentences_per_doc[i]))]
+
                 # print(f"doc{i}, num of sentences{num_sentences_per_doc[i]}, num of pred_pairs{len(pairs)}")
                 # ipdb.set_trace()
                 for target_pair in doc_couples_b[i]:
@@ -256,18 +262,18 @@ def main():
                 n_hidden=configs.n_hidden, 
                 n_class=configs.n_class).to(DEVICE)
     
+    folder_num = configs.end_fold - configs.start_fold
     # train loop 
-    train_losses, val_losses, test_losses = 0.0, 0.0, 0.0
-    precision_sum_train, recall_sum_train, f1_sum_train = 0, 0, 0
-    precision_sum_test, recall_sum_test, f1_sum_test = 0, 0, 0
-    precision_sum_val, recall_sum_val, f1_sum_val = 0, 0, 0
-    for epoch in range(1, EPOCHS + 1):
-        print(f'============================Epoch {epoch}/{EPOCHS}============================')
+    for epoch in range(0, EPOCHS):  # change epoch starting from 0
+        print(f'============================Epoch {epoch+1}/{EPOCHS}============================')
+        train_losses, val_losses = 0.0, 0.0
+        precision_sum_train, recall_sum_train, f1_sum_train = 0, 0, 0
+        precision_sum_val, recall_sum_val, f1_sum_val = 0, 0, 0
         for fold_id in range(configs.start_fold, configs.end_fold): 
-            train_set, val_set, test_set = load_data(configs, fold_id)
-            train_loss,precision_train,recall_train,f1_train = train_loop(configs, model, train_set)
+            train_set, val_set, _ = load_data(configs, fold_id)
+            train_loss,precision_train,recall_train,f1_train = train_loop(configs, model, train_set,epoch)
             # Calculate average loss for the epoch
-            val_loss,precision_val,recall_val,f1_val = eval_loop(configs, model, val_set)
+            val_loss,precision_val,recall_val,f1_val = eval_loop(configs, model, val_set,epoch)
             
             train_losses += train_loss
             val_losses += val_loss
@@ -278,19 +284,25 @@ def main():
             
             precision_sum_val += precision_val
             recall_sum_val += recall_val
-            f1_sum_val += f1_sum_val
+            f1_sum_val += f1_val
             
-        print(f'Training Loss: {train_losses/epoch:.4f}, Precision: {precision_sum_train/epoch:.4f}, Recall: {recall_sum_train/epoch:.4f}, F1: {f1_sum_train/epoch:.4f}')
-        print(f'Validation Loss: {val_losses/epoch:.4f}, Precision: {precision_sum_val/epoch:.4f}, Recall: {recall_sum_val/epoch:.4f}, F1: {f1_sum_val/epoch:.4f}')
+        print(f'Training Loss: {train_losses/folder_num:.4f}, Precision: {precision_sum_train/folder_num:.4f}, Recall: {recall_sum_train/folder_num:.4f}, F1: {f1_sum_train/folder_num:.4f}')
+        print(f'Validation Loss: {val_losses/folder_num:.4f}, Precision: {precision_sum_val/folder_num:.4f}, Recall: {recall_sum_val/folder_num:.4f}, F1: {f1_sum_val/folder_num:.4f}')
     
-        # test loop
-        test_loss,precision_test,recall_test,f1_test = eval_loop(configs, model, test_set)
+    # test loop
+    print(f'============================ Testing ============================')
+    test_losses = 0.0
+    precision_sum_test, recall_sum_test, f1_sum_test = 0, 0, 0
+    for fold_id in range(configs.start_fold, configs.end_fold):
+        _,_,test_set = load_data(configs, fold_id)
+        test_loss,precision_test,recall_test,f1_test = eval_loop(configs, model, test_set,epoch)
         
         test_losses += test_loss
         precision_sum_test += precision_test
         recall_sum_test += recall_test
         f1_sum_test += f1_test
-        print(f'Test Loss: {test_losses/epoch:.4f}, Precision: {precision_sum_test/epoch:.4f}, Recall: {recall_sum_test/epoch:.4f}, F1: {f1_sum_test/epoch:.4f}')
+    print(f'Test Loss: {test_losses/folder_num:.4f}, Precision: {precision_sum_test/folder_num:.4f}, Recall: {recall_sum_test/folder_num:.4f}, F1: {f1_sum_test/folder_num:.4f}')
+
 if __name__ == "__main__":
 
     main()
