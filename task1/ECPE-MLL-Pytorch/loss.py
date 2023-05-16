@@ -68,15 +68,6 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,
 
         y_list_mask_single,scores_mask = sent_mask
 
-        # torch.set_printoptions(threshold=sys.maxsize)
-        # print(y_list_mask_single.shape)
-        # print(y_list_mask_single[0])
-        # print(y_list_mask_single[-1])
-        # print(scores_mask.shape)
-        # print(scores_mask[0])
-        # print(scores_mask[-1])
-        # ipdb.set_trace()
-
 
 
     loss_isml = 0
@@ -91,8 +82,6 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,
     
     cml_out_beforemask = torch.div(1,1+torch.exp(cml_scores))
     eml_out_beforemask = torch.div(1,1+torch.exp(eml_scores))
-    # print(cml_scores.get_device())
-    # ipdb.set_trace()
     if sent_mask_flag==True:
         loss_cmll = -torch.sum(torch.mul(scores_mask,torch.mul(slidingmask,(torch.mul(y_cml_pairs,torch.log(cml_out_beforemask)) * adj_param\
                                         +torch.mul(1-y_cml_pairs,torch.log(1-cml_out_beforemask))))))\
@@ -113,11 +102,7 @@ def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,
         eml_out = torch.mul(slidingmask, eml_out_beforemask)
     
     loss_total = lamb_1 * loss_isml + lamb_2 * loss_cmll + lamb_3 * loss_emll
-    # loss_total = lamb_2 * loss_cmll + lamb_3 * loss_emll
 
-    # print(cml_scores)
-    # print(eml_scores)
-    print(f'loss_total:{loss_total:.8f}, loss_isml:{loss_isml:.8f}, loss_cmll:{loss_cmll:.8f},loss_emll:{loss_emll:.8f}')
-    # print(f'loss_total:{loss_total:.4f}, loss_isml:no calc, loss_cmll:{loss_cmll:.4f},loss_emll:{loss_emll:.4f}')
+    # print(f'OUTPUT >>>> loss_total:{loss_total:.8f}, loss_isml:{loss_isml:.8f}, loss_cmll:{loss_cmll:.8f},loss_emll:{loss_emll:.8f}')
         
     return loss_total,cml_out,eml_out

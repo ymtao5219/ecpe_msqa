@@ -1,0 +1,7 @@
+1. output:
+python3 -u train.py 2>&1 | grep -E "OUTPUT >>>>|=="
+
+2. github remote repo git permission for operation from ssh-ed vm:
+eval "$(ssh-agent -s)"
+ssh-add [your private ssh key path]
+ssh -T git@github.com

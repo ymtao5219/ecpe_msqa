@@ -43,16 +43,6 @@ def loss_mask(y_mask_b):
                             for i in range(configs.batch_size)]
     scores_mask = (torch.stack(scores_mask,dim=0)).to(device=device)
 
-    # torch.set_printoptions(threshold=sys.maxsize)
-    # print(num_sentences_per_doc)
-    # print(y_list_mask_single.shape)
-    # print(y_list_mask_single[0])
-    # print(y_list_mask_single[-1])
-    # print(scores_mask_single.shape)
-    # print(scores_mask_single[0])
-    # print(scores_mask_single[-1])
-    # ipdb.set_trace()
-
     return y_list_mask_single,scores_mask
 
 
@@ -75,8 +65,6 @@ def train_loop(configs, model, train_loader,epoch):
                                         W=configs.window_size, 
                                         batch_size=configs.batch_size, 
                                         device=device)
-        # print(sliding_mask.get_device())
-        # ipdb.set_trace()
 
     for train_step, batch in enumerate(train_loader, 1):
         with torch.no_grad():
@@ -96,14 +84,6 @@ def train_loop(configs, model, train_loader,epoch):
         
         y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
 
-        # print(y_e_list[0].get_device())
-        # print(y_e_list[0].shape)
-        # print(y_e_list[0])
-        
-        # ipdb.set_trace()
-        # print(cml_scores.get_device())
-        # print(sliding_mask.get_device())
-        # ipdb.set_trace()
         loss_total,cml_out,eml_out = loss_calc(y_e_list,
                                                 y_c_list,
                                                 doc_couples_b,
@@ -271,7 +251,7 @@ def check_accuracy_batch(doc_couples_b,res,y_mask_b):
                 predict_len += len(pairs) 
                 gt_len += len(doc_couples_b[i])
 
-    print(f'tp:{tp},predict_len:{predict_len},gt_len:{gt_len}')
+    # print(f'tp:{tp},predict_len:{predict_len},gt_len:{gt_len}')
         
     return tp,predict_len,gt_len
 
@@ -321,8 +301,8 @@ def main():
             recall_sum_val += recall_val
             f1_sum_val += f1_val
             
-        print(f'Training Loss: {train_losses/folder_num:.4f}, Precision: {precision_sum_train/folder_num:.4f}, Recall: {recall_sum_train/folder_num:.4f}, F1: {f1_sum_train/folder_num:.4f}')
-        print(f'Validation Loss: {val_losses/folder_num:.4f}, Precision: {precision_sum_val/folder_num:.4f}, Recall: {recall_sum_val/folder_num:.4f}, F1: {f1_sum_val/folder_num:.4f}')
+        print(f'OUTPUT >>>> Training Loss: {train_losses/folder_num:.4f}, Precision: {precision_sum_train/folder_num:.4f}, Recall: {recall_sum_train/folder_num:.4f}, F1: {f1_sum_train/folder_num:.4f}')
+        print(f'OUTPUT >>>> Validation Loss: {val_losses/folder_num:.4f}, Precision: {precision_sum_val/folder_num:.4f}, Recall: {recall_sum_val/folder_num:.4f}, F1: {f1_sum_val/folder_num:.4f}')
     
     # test loop
     print(f'============================ Testing ============================')
@@ -336,7 +316,7 @@ def main():
         precision_sum_test += precision_test
         recall_sum_test += recall_test
         f1_sum_test += f1_test
-    print(f'Test Loss: {test_losses/folder_num:.4f}, Precision: {precision_sum_test/folder_num:.4f}, Recall: {recall_sum_test/folder_num:.4f}, F1: {f1_sum_test/folder_num:.4f}')
+    print(f'OUTPUT >>>> Test Loss: {test_losses/folder_num:.4f}, Precision: {precision_sum_test/folder_num:.4f}, Recall: {recall_sum_test/folder_num:.4f}, F1: {f1_sum_test/folder_num:.4f}')
 
 if __name__ == "__main__":
 
