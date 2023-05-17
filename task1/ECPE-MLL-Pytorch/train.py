@@ -13,17 +13,6 @@ import ipdb
 import tqdm
 
 def load_data(configs, fold_id=1):
-    if configs.split == 'split10':
-        config.start_fold = 1
-        config.end_fold = 11
-        configs.epochs = 20
-    elif configs.split == 'split20':
-        config.start_fold = 1
-        config.end_fold = 21
-        configs.epochs = 15
-    else:
-        print('Unknown data split.')
-        exit()
         
     train_loader = build_train_data(configs, fold_id=fold_id)
     if configs.split == 'split20':
@@ -84,7 +73,8 @@ def train_loop(configs, model, train_loader,epoch):
         
         y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
 
-        loss_total,cml_out,eml_out = loss_calc(y_e_list,
+        loss_total,cml_out,eml_out = loss_calc(configs,
+                                                y_e_list,
                                                 y_c_list,
                                                 doc_couples_b,
                                                 cml_scores,
@@ -110,10 +100,12 @@ def train_loop(configs, model, train_loader,epoch):
         optimizer.step()
         scheduler.step()
 
-        running_loss += loss_total.item()
+        with torch.no_grad():
+            running_loss += loss_total.item()
 
     with torch.no_grad():
         # metrics
+        print(f'OUTPUT >>>> tp_epoch:{tp_epoch},predict_len_epoch:{predict_len_epoch},gt_len_epoch:{gt_len_epoch}')
         precision, recall, f1 = metrics_calc(tp_epoch,predict_len_epoch,gt_len_epoch)
         # print(precision,recall,f1)
 
@@ -145,7 +137,8 @@ def eval_loop(configs, model, val_loader,epoch):
 
             y_e_list, y_c_list, s_final, cml_scores, eml_scores = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
             
-            loss_total,cml_out,eml_out = loss_calc(y_e_list,
+            loss_total,cml_out,eml_out = loss_calc(configs,
+                                                   y_e_list,
                                                     y_c_list,
                                                     doc_couples_b,
                                                     cml_scores,
@@ -223,7 +216,7 @@ def check_accuracy_batch(doc_couples_b,res,y_mask_b):
     tp = 0
     predict_len = 1
     gt_len = 0
-    for i in range(config.batch_size):
+    for i in range(configs.batch_size):
         if res.shape[0] == 0:
             tp += 0
             predict_len += 0
@@ -261,10 +254,10 @@ def metrics_calc(tp_epoch, predict_len_epoch, gt_len_epoch):
     f1 = 2 * (precision * recall)/(precision + recall) if precision + recall > 0 else 0
     return precision,recall,f1
 
-def main(): 
+def main(configs): 
     
     # load data 
-    configs = Config()
+    
     EPOCHS = configs.EPOCHS
     
     # initilize the model
@@ -285,6 +278,7 @@ def main():
         precision_sum_train, recall_sum_train, f1_sum_train = 0, 0, 0
         precision_sum_val, recall_sum_val, f1_sum_val = 0, 0, 0
         for fold_id in range(configs.start_fold, configs.end_fold): 
+            print(f'OUTPUT >>>> fold:{fold_id}')
             train_set, val_set, _ = load_data(configs, fold_id)
             train_loss,precision_train,recall_train,f1_train = train_loop(configs, model, train_set,epoch)
             # Calculate average loss for the epoch
@@ -319,6 +313,6 @@ def main():
     print(f'OUTPUT >>>> Test Loss: {test_losses/folder_num:.4f}, Precision: {precision_sum_test/folder_num:.4f}, Recall: {recall_sum_test/folder_num:.4f}, F1: {f1_sum_test/folder_num:.4f}')
 
 if __name__ == "__main__":
-
-    main()
+    configs = Config()
+    main(configs)
 
