@@ -4,21 +4,13 @@ from config import *
 import ipdb
 import sys
 
-batch_size = 8
 device = DEVICE
 
-configs = Config()
-N = configs.model_iter_num              # the repeating block number of ISML, should be >= 1
-D = configs.max_doc_len
-hidden_size = configs.n_hidden
-batch_size = configs.batch_size
-lamb_1 = configs.lamb_1
-lamb_2 = configs.lamb_2
-lamb_3 = configs.lamb_3
-adj_param = configs.adj_param
+def labelTransform(configs,doc_couples_b):
+    D = configs.max_doc_len
+    batch_size = configs.batch_size
+    adj_param = configs.adj_param
 
-def labelTransform(doc_couples_b):
-    # batch_size = len(doc_couples_b)
     y_e_isml = torch.zeros(batch_size, D, 2)
     y_c_isml = torch.zeros(batch_size, D, 2)
 
@@ -49,9 +41,13 @@ def labelTransform(doc_couples_b):
 
     return y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs
 
-def loss_calc(y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,sent_mask,epoch,training=True,alter=False,sent_mask_flag=False):
+def loss_calc(configs,y_e_list,y_c_list,doc_couples_b,cml_scores,eml_scores,slidingmask,sent_mask,epoch,training=True,alter=False,sent_mask_flag=False):
     with torch.no_grad():
-        y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(doc_couples_b)
+        D = configs.max_doc_len
+        N = configs.model_iter_num
+        adj_param = configs.adj_param
+
+        y_e_isml,y_c_isml,y_cml_pairs,y_eml_pairs = labelTransform(configs,doc_couples_b)
         if (training == True) and (alter==True):
             if (epoch % 4 == 0) or (epoch % 4 == 1):
                 lamb_1 = configs.lamb_1

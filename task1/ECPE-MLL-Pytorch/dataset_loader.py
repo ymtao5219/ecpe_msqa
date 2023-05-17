@@ -48,7 +48,7 @@ class MyDataset(Dataset):
         self.test_file = join(data_dir, self.split, TEST_FILE % fold_id)
 
         self.batch_size = configs.batch_size
-        self.epochs = configs.epochs
+        self.epochs = configs.EPOCHS
 
         self.bert_tokenizer = BertTokenizer.from_pretrained(configs.model_name)
 

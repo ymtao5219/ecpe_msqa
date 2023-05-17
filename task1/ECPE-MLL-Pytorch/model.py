@@ -4,7 +4,7 @@ from transformers import BertModel
 from config import DEVICE
 import torch.nn.functional as F
 from config import *
-config = Config()
+# config = Config()
 
 import ipdb
 
@@ -157,7 +157,7 @@ class ISMLBlock(nn.Module):
         self.fc_cml = nn.Linear(hidden_size*2,D)
         self.fc_eml = nn.Linear(hidden_size*2,D)
 
-    def forward(self, s1, y_mask):
+    def forward(self, s1, D,y_mask):
         self.y_e_list = []
         self.y_c_list = []
 
@@ -177,8 +177,8 @@ class ISMLBlock(nn.Module):
         self.fc_cml.to(s1.device)
         self.fc_eml.to(s1.device)
 
-        with torch.no_grad():
-            mask = input_padding(y_mask)
+        # with torch.no_grad():
+        #     mask = input_padding(y_mask,D)
         
         for n in range(self.N):
             # print(self.bilstm_e_list[n](s_tmp))
@@ -252,16 +252,16 @@ class Network(nn.Module):
         x = x * y_mask
         x = self.word_attention(x)
         x = x * y_mask
-        x = input_padding(x)
-        x = self.isml_block(x, y_mask)
+        x = input_padding(x,self.max_doc_len)
+        x = self.isml_block(x, self.max_doc_len, y_mask)
         return x
 
 #####################################################################################################
 # helper functions
 #####################################################################################################
-D = config.max_doc_len
-def input_padding(s1,len_target=D):  # D = 75 --> max doc length
-    s1 = torch.nn.functional.pad(s1,(0,0,0,len_target-s1.shape[1]),value=0)
+# D = config.max_doc_len
+def input_padding(s1,target):  # target --> max doc length
+    s1 = torch.nn.functional.pad(s1,(0,0,0,target-s1.shape[1]),value=0)
     return s1
 
 def slidingmask_gen(D, W, batch_size, device):

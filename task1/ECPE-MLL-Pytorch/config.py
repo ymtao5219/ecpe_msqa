@@ -18,16 +18,14 @@ class Config:
         self.window_size = 3
         self.n_hidden = 100
         self.n_class = 2
-        ## For Training ##
-        self.start_fold = 1
-        self.end_fold = 11
+        # self.start_fold = 1
+        # self.end_fold = 3      # 11 max --> fold 10
         self.split = 'split20'
 
         self.batch_size = 36
         self.learning_rate = 0.001 # 0.005 in the paper
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
-        self.EPOCHS = 15
         self.weight_decay = 1e-5   #1e-5 in the paper
         self.lamb_1 = 1.0 
         self.lamb_2 = 1.0
@@ -38,4 +36,16 @@ class Config:
         self.adj_param = 75
         self.gradient_accumulation_steps = 2
         self.warmup_proportion = 0.1
+
+        if self.split == 'split10':
+            self.start_fold = 1
+            self.end_fold = 11      # 11 max --> 10-fold
+            self.EPOCHS = 20
+        elif self.split == 'split20':
+            self.start_fold = 1
+            self.end_fold = 21      # 21 max --> 20-fold
+            self.EPOCHS = 10
+        else:
+            print('Unknown data split.')
+            exit()
 
