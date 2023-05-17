@@ -43,8 +43,8 @@ class Config:
             self.EPOCHS = 20
         elif self.split == 'split20':
             self.start_fold = 1
-            self.end_fold = 5      # 21 max --> 20-fold
-            self.EPOCHS = 10
+            self.end_fold = 21      # 21 max --> 20-fold
+            self.EPOCHS = 15
         else:
             print('Unknown data split.')
             exit()

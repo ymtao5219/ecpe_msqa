@@ -136,22 +136,13 @@ class ISMLBlock(nn.Module):
         self.activation = nn.LeakyReLU() #nn.ReLU()
         
         for n in range(N):
-            # bilstm_e = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
-            #                    num_layers= 1, batch_first=True,bidirectional=True)
             self.bilstm_e_list.append(nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
                                num_layers= 4, batch_first=True,bidirectional=True))
 
-            # bilstm_c = nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
-            #                    num_layers= 1, batch_first=True,bidirectional=True)
             self.bilstm_c_list.append(nn.LSTM(input_size= hidden_size*2+4*n, hidden_size= hidden_size,\
                                num_layers= 4, batch_first=True,bidirectional=True))
 
-            # fc_e = nn.Linear(hidden_size*2,2)
-            # nn.init.kaiming_normal_(fc_e.weight)
             self.fc_e_list.append(nn.Linear(hidden_size*2,2))
-
-            # fc_c = nn.Linear(hidden_size*2,2)
-            # nn.init.kaiming_normal_(fc_c.weight)
             self.fc_c_list.append(nn.Linear(hidden_size*2,2))
 
         self.fc_cml = nn.Linear(hidden_size*2,D)
