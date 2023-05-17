@@ -255,7 +255,9 @@ def metrics_calc(tp_epoch, predict_len_epoch, gt_len_epoch):
     return precision,recall,f1
 
 def main(configs): 
-    
+    # print(configs.EPOCHS)
+    # ipdb.set_trace()
+
     # load data 
     
     EPOCHS = configs.EPOCHS
@@ -313,6 +315,15 @@ def main(configs):
     print(f'OUTPUT >>>> Test Loss: {test_losses/folder_num:.4f}, Precision: {precision_sum_test/folder_num:.4f}, Recall: {recall_sum_test/folder_num:.4f}, F1: {f1_sum_test/folder_num:.4f}')
 
 if __name__ == "__main__":
+    # hyperparameter tuning
     configs = Config()
+    # print(configs.__dict__)
+    # ipdb.set_trace()
+    # print(configs.EPOCHS)
+    mod_para = {'EPOCHS':5}
+    for key in mod_para:
+        configs.__dict__[key] = mod_para[key]
+    # print(configs.EPOCHS)
+    # ipdb.set_trace()
     main(configs)
 
