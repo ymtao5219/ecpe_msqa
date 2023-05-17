@@ -26,6 +26,11 @@ python train.py
     
 
 ## Task 2: Evaluting the ECPE task using GPT3.5 
+- 'task2/zeroshot_example': contains the code for an zeroshot learning example with ChatGPT. Running the codes will save the response of ChatGPT to the text. You may need to use your own API keys to call ChatGPT.
+- The below are commands to run the code:
+```
+python zeroshot.py --api_keys <your API keys>
+```
 - `task2/`: 
 
 
