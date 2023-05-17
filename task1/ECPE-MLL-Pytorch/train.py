@@ -323,7 +323,7 @@ if __name__ == "__main__":
     configs = Config()
 
     # hyperparameter tuning
-    mod_para = {'EPOCHS':10,'end_fold':11,'adj_param':50,'model_iter_num':16,'learning_rate':1e-3,'threshold':0.75}
+    mod_para = {'adj_param':50,'model_iter_num':16,'learning_rate':3e-4,'threshold':0.75}
     print(f'==== modified parameters: {mod_para} ====')
     for key in mod_para:
         configs.__dict__[key] = mod_para[key]
