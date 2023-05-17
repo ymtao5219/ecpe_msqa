@@ -247,11 +247,11 @@ class Network(nn.Module):
         
         y_mask = torch.tensor(y_mask).to(bert_clause_b.device).unsqueeze(-1)
         x = self.bert(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
-        x = x * y_mask 
+        # x = x * y_mask 
         x = self.biLSTM(x)
-        x = x * y_mask
+        # x = x * y_mask
         x = self.word_attention(x)
-        x = x * y_mask
+        # x = x * y_mask
         x = input_padding(x,self.max_doc_len)
         x = self.isml_block(x, self.max_doc_len, y_mask)
         return x

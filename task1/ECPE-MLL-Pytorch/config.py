@@ -43,9 +43,13 @@ class Config:
             self.EPOCHS = 20
         elif self.split == 'split20':
             self.start_fold = 1
-            self.end_fold = 21      # 21 max --> 20-fold
+            self.end_fold = 5      # 21 max --> 20-fold
             self.EPOCHS = 10
         else:
             print('Unknown data split.')
             exit()
 
+    # def para_mod(self,**mod_para):
+    #     for key in mod_para:
+    #         if key == 'EPOCHS':
+    #             self.EPOCHS = mod_para[key]
