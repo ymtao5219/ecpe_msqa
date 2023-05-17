@@ -86,7 +86,7 @@ def train_loop(configs, model, train_loader,epoch):
                                                 alter=False,
                                                 sent_mask_flag=True)
         with torch.no_grad():
-            res = inference(cml_out, eml_out, y_mask_b, mode='logic_or')
+            res = inference(configs,cml_out, eml_out, y_mask_b, mode='logic_or')
             # todo: calculate metrics
             tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res,y_mask_b)
             tp_epoch += tp
@@ -150,7 +150,7 @@ def eval_loop(configs, model, val_loader,epoch):
                                                     alter=False,
                                                     sent_mask_flag=True)
             running_loss += loss_total.item()
-            res = inference(cml_out, eml_out, y_mask_b, mode='logic_or')
+            res = inference(configs,cml_out, eml_out, y_mask_b, mode='logic_or')
             # todo: calculate metrics
             tp,predict_len,gt_len = check_accuracy_batch(doc_couples_b,res,y_mask_b)
             tp_epoch += tp
@@ -176,7 +176,7 @@ def top_k_values(tensor, k=5):
 
     return top_values
 
-def inference(cml_out, eml_out, y_mask_b,mode='avg',topk=False):
+def inference(configs,cml_out, eml_out, y_mask_b,mode='avg',topk=False):
     eml_out_T = torch.permute(eml_out, (0,2,1))
     # todo: topk
 
@@ -184,17 +184,17 @@ def inference(cml_out, eml_out, y_mask_b,mode='avg',topk=False):
     # eml_out_T = top_k_values(eml_out_T)
     
     if mode == 'avg':
-        out = ((cml_out + eml_out_T)/2)>0.5
+        out = ((cml_out + eml_out_T)/2)>configs.threshold
         out_ind = out.nonzero()
     elif mode == 'logic_and':
         # ipdb.set_trace()
-        cml_pair = cml_out>0.5
-        eml_pair = eml_out_T>0.5
+        cml_pair = cml_out>configs.threshold
+        eml_pair = eml_out_T>configs.threshold
         out = torch.logical_and(cml_pair, eml_pair)
         out_ind = out.nonzero()
     elif mode == 'logic_or':
-        cml_pair = cml_out>0.5
-        eml_pair = eml_out_T>0.5
+        cml_pair = cml_out>configs.threshold
+        eml_pair = eml_out_T>configs.threshold
         out = torch.logical_or(cml_pair, eml_pair)
         out_ind = out.nonzero()
 
@@ -279,8 +279,12 @@ def main(configs):
         train_losses, val_losses = 0.0, 0.0
         precision_sum_train, recall_sum_train, f1_sum_train = 0, 0, 0
         precision_sum_val, recall_sum_val, f1_sum_val = 0, 0, 0
-        for fold_id in range(configs.start_fold, configs.end_fold): 
-            print(f'OUTPUT >>>> fold:{fold_id}')
+
+        folder_list = torch.randperm(configs.end_fold-1)+1
+        # for fold_id in range(configs.start_fold, configs.end_fold):
+        for fold_id in folder_list: 
+            fold_id = fold_id.item()
+            print(f'SETUP >>>> fold:{fold_id}')
             train_set, val_set, _ = load_data(configs, fold_id)
             train_loss,precision_train,recall_train,f1_train = train_loop(configs, model, train_set,epoch)
             # Calculate average loss for the epoch
@@ -315,15 +319,14 @@ def main(configs):
     print(f'OUTPUT >>>> Test Loss: {test_losses/folder_num:.4f}, Precision: {precision_sum_test/folder_num:.4f}, Recall: {recall_sum_test/folder_num:.4f}, F1: {f1_sum_test/folder_num:.4f}')
 
 if __name__ == "__main__":
-    # hyperparameter tuning
+    
     configs = Config()
-    # print(configs.__dict__)
-    # ipdb.set_trace()
-    # print(configs.EPOCHS)
-    mod_para = {'EPOCHS':5}
+
+    # hyperparameter tuning
+    mod_para = {'EPOCHS':10,'end_fold':11,'adj_param':50,'model_iter_num':16,'learning_rate':1e-3,'threshold':0.75}
+    print(f'==== modified parameters: {mod_para} ====')
     for key in mod_para:
         configs.__dict__[key] = mod_para[key]
-    # print(configs.EPOCHS)
-    # ipdb.set_trace()
+    print(f'==== parameter list: {configs.__dict__} ====')
     main(configs)
 
