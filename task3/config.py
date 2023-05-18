@@ -1,7 +1,7 @@
 import torch
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 TORCH_SEED = 129
-DATA_DIR = '../../data_json'
+DATA_DIR = '../data_json'
 TRAIN_FILE = 'fold%s_train.json'
 VALID_FILE = 'fold%s_valid.json'
 TEST_FILE  = 'fold%s_test.json'
@@ -9,7 +9,7 @@ TEST_FILE  = 'fold%s_test.json'
 class Config:
     def __init__(self):
         ## input struct ##
-        self.model_name = "bert-base-chinese"
+        self.model_name = "bert-base-chinese"#"NchuNLP/Chinese-Question-Answering"
         self.bert_cache_path = 'bert_base_chinese/'
         self.max_sen_len = 30
         self.max_doc_len = 75
@@ -24,7 +24,7 @@ class Config:
         self.start_fold = 1
         self.end_fold = 11
         self.split = 'split20'
-        self.batch_size = 8
+        self.batch_size = 1
         self.learning_rate = 2e-5
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0

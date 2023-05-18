@@ -1,0 +1,9 @@
+1. output:
+> python3 -u train.py 2>&1 | grep -E ">>>>|===="
+
+2. github remote repo git permission for operation from ssh-ed vm:
+> {only first time} ssh-keygen -t ed25519 -C "[github account email address]"
+> eval "$(ssh-agent -s)"
+> ssh-add [your ed25519 private ssh key path]
+> ssh -T git@github.com
+> git clone/pull/push...

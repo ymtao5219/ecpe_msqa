@@ -10,29 +10,46 @@ class Config:
     def __init__(self):
         ## input struct ##
         self.model_name = "bert-base-chinese"
-        self.bert_cache_path = 'bert_base_chinese/'
-        self.max_sen_len = 30
-        self.max_doc_len = 75
-        self.max_doc_len_bert = 350
+        self.max_sen_len = 30 # 30 # max number of tokens per clause
+        self.max_doc_len = 50 # 75 # max number of clauses per document
+        self.max_doc_len_bert = 350 # max number of tokens per document for Bert Model
         ## model struct ##
-        self.model_iter_num = 1
-        self.model_type = 'Inter-EC'
+        self.model_iter_num = 6 # iter num of ISML
         self.window_size = 3
         self.n_hidden = 100
         self.n_class = 2
-        ## For Training ##
-        self.start_fold = 1
-        self.end_fold = 11
+        # self.start_fold = 1
+        # self.end_fold = 3      # 11 max --> fold 10
         self.split = 'split20'
-        self.batch_size = 8
-        self.learning_rate = 2e-5
+
+        self.batch_size = 36
+        self.learning_rate = 0.001 # 0.005 in the paper
         self.keep_prob1 = 0.5
         self.keep_prob2 = 1.0
-        self.l2_reg = 1e-5
-        self.emo = 1.0
-        self.cause = 1.0
-        self.pair = 1.0
+        self.weight_decay = 1e-5   #1e-5 in the paper
+        self.lamb_1 = 1.0 
+        self.lamb_2 = 1.0
+        self.lamb_3 = 1.0
         self.threshold = 0.5
-        self.training_iter = 20
         self.log_file_name = ''
+        
+        self.adj_param = 75
+        self.gradient_accumulation_steps = 2
+        self.warmup_proportion = 0.1
 
+        if self.split == 'split10':
+            self.start_fold = 1
+            self.end_fold = 11      # 11 max --> 10-fold
+            self.EPOCHS = 20
+        elif self.split == 'split20':
+            self.start_fold = 1
+            self.end_fold = 11      # 21 max --> 20-fold
+            self.EPOCHS = 10
+        else:
+            print('Unknown data split.')
+            exit()
+
+    # def para_mod(self,**mod_para):
+    #     for key in mod_para:
+    #         if key == 'EPOCHS':
+    #             self.EPOCHS = mod_para[key]
