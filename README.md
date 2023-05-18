@@ -35,7 +35,7 @@ python3 -u train.py 2>&1 | grep -E ">>>>|===="
 ```
 python zeroshot.py --api_keys <your API keys>
 ```
-
+- 'task2/n_shot': contains the code for n_shot learning example with ChatGPT. Running the notebook files for different type of prompt format.. You need your own API keys. 
 
 
 ## Task 3:ECPE as an extractive question-answering problem 
