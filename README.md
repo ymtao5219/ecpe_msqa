@@ -11,6 +11,8 @@ The repository contains code for CS685 NLP Project in Spring 2023 at Umass Amher
 
 We have three tasks to complete in our project proposal. We orgainize our code according to the tasks.  
 
+## Task 0: Statistical analysis of the dataset
+- 'task0/distribution.ipynb': contains the statistical analysis of the dataset. 
 ## Task 1: Our proposed method
 - 'task1/ECPE-MLL': contains the code of the paper. Their code is publicly availabel at: https://github.com/NUSTM/ECPE-MLL. The authors use Tensorflow 1.x and Python 2. 
 - `task1/ECPE-MLL-Pytorch`: contains our proposed method to solve this task 
