@@ -21,7 +21,8 @@ We have three tasks to complete in our project proposal. We orgainize our code a
 - The below are commands to run the code:
 ```bash
 cd task1/ECPE-MLL-Pytorch
-# the hyperparameters are stored in the config.py file
+# The hyperparameters are stored in the config.py file. 
+# They may also be modified in a dictionary named "mod_para" in train.py for grid search.
 python3 -u train.py 2>&1 | grep -E ">>>>|===="
 ```
 - Compute resources: 
