@@ -22,7 +22,7 @@ We have three tasks to complete in our project proposal. We orgainize our code a
 ```bash
 cd task1/ECPE-MLL-Pytorch
 # the hyperparameters are stored in the config.py file
-python train.py 
+python3 -u train.py 2>&1 | grep -E ">>>>|===="
 ```
 - Compute resources: 
     - We utilize Google Cloud Compute services for model training. The hardware consists of an Intel Skylake CPU (13GB) platform along with a single NVIDIA T4 GPU (with 16GB of memory). 
