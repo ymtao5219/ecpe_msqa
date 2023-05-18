@@ -47,28 +47,15 @@ def main(configs):
     data_iter = iter(train_set)
     instance = next(data_iter)
 
-    
-    # doc_len_b: document length in a batch
-    # adj_b: adj matrix in a batch, do not need this, #todo: will remove this
-    # y_emotions_b: binary vector indicating emotion clause in a batch, -1 means no sentences in this document
-    # y_causes_b: binary vector indicating cause clause in a batch, -1 means no sentences in this document
-    # y_mask_b: binary vector indicating whether a sentence is valid in a batch, -1 means no sentences in this document
-    # doc_couples_b: ground truth label in a batch
-    # doc_id_b: document id in a batch
-    # bert_token_b: input ids in a batch
-    # bert_segment_b: segment ids in a batch
-    # bert_masks_b: attention masks in a batch
-    # bert_clause_b: [CLS] index for each doc in a batch
     doc_len_b, adj_b, y_emotions_b, y_causes_b, y_mask_b, doc_couples_b, doc_id_b, \
     bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b = instance
-    
-
     
     # initialize model
     model = PretrainedBERT(configs.model_name)
     out = model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b)
-
+    out2 = Pooler(100, 73)
     ipdb.set_trace()
+    
     # train_loop()
     
     # eval_loop()

@@ -173,7 +173,6 @@ class MyDataset(Dataset):
 
     def token_trunk(self, bert_token_idx, bert_clause_idx, bert_segments_idx, bert_token_lens,
                     doc_couples, y_emotions, y_causes, doc_len):
-        # TODO: cannot handle some extreme cases now
         emotion, cause = doc_couples[0]
         if emotion > doc_len / 2 and cause > doc_len / 2:
             i = 0
@@ -266,7 +265,6 @@ def pad_matrices(doc_len_b):
                             shape=(N, N), dtype=np.float32)
         adj_b.append(adj.toarray())
     return adj_b
-
 
 def pad_list(element_list, max_len, pad_mark):
     element_list_pad = element_list[:]
