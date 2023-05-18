@@ -1,11 +1,13 @@
 import openai 
 
 class Container:
+    '''Class methods used to store functions'''
     def __init__(self, api_key, model='text-davinci-003') -> None:
         self.model = model
         openai.api_key = api_key
     
     def chat(self, text_template, example, temp=0.7, n=2):
+        '''Chat to GPT with given text template. Due to the time we didn't implement the function for gpt-3.5-turbo'''
         completion = None
         if self.model == 'text-davinci-003':
             # prompt = self.prompt_parse(text_template, example)
@@ -19,6 +21,7 @@ class Container:
         return completion, prompt
     
     def prompt_parse(self, template, example):
+        '''parse function'''
         assert len(template.fields) == len(example.fields)
         result = template.instruction + '\n'
         result += '---\n'
@@ -40,23 +43,13 @@ class Container:
         return result
     
     def prompt_parse2(self, template, example):
+        '''Chinese Instruction parse function'''
         # print(len(template.fields))
         # print(len(example.fields))
         assert len(template.fields) == len(example.fields)
         result = template.instruction + '\n'
         # result += '---\n'
         result += example.fields[0]
-        # for i in range(len(example.fields)):
-            # prefix = template.fields[i][0] # prefix
-            # if 'Example' in prefix:
-            #     result += prefix + '[\n'
-            #     for f in example.fields[i]:
-            #         result += '{Content:' + str(f['content']) + 'Answer:' + str(f['pair']) + '}' + '\n'
-            #     result += ']\n\n'
-            #     # result += prefix + str(example.fields[i]) + '\n'
-            # else:
-            #     result += prefix + str(example.fields[i]) + '\n'
-            # # print(example.fields[i])
         for e in template.fields:
             result += ' '.join(e) + '\n'
         # result += '---\n'
