@@ -317,16 +317,43 @@ def main(configs):
         recall_sum_test += recall_test
         f1_sum_test += f1_test
     print(f'OUTPUT >>>> Test Loss: {test_losses/folder_num:.4f}, Precision: {precision_sum_test/folder_num:.4f}, Recall: {recall_sum_test/folder_num:.4f}, F1: {f1_sum_test/folder_num:.4f}')
+    return model
 
 if __name__ == "__main__":
     
     configs = Config()
 
     # hyperparameter tuning
-    mod_para = {'adj_param':50,'model_iter_num':16,'learning_rate':3e-4,'threshold':0.75}
+    mod_para = {'EPOCHS':30,'end_fold':21,'adj_param':30,'model_iter_num':16,'learning_rate':3e-4,'threshold':0.75}
     print(f'==== modified parameters: {mod_para} ====')
     for key in mod_para:
         configs.__dict__[key] = mod_para[key]
     print(f'==== parameter list: {configs.__dict__} ====')
-    main(configs)
+    trained_model = main(configs)
 
+    # # show examples
+    # _,_,test_set = load_data(configs, 1)
+    # for val_step, batch in enumerate(test_set, 1):
+    #     doc_len_b, y_emotions_b, y_causes_b, y_mask_b, doc_couples_b, doc_id_b, \
+    #         bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b = batch
+    #     y_list_mask_single,scores_mask = loss_mask(y_mask_b)
+    #     sent_mask = (y_list_mask_single,scores_mask)
+    #     sliding_mask = slidingmask_gen(D=configs.max_doc_len, 
+    #                                     W=configs.window_size, 
+    #                                     batch_size=configs.batch_size, 
+    #                                     device=device)
+    #     y_e_list, y_c_list, s_final, cml_scores, eml_scores = trained_model(bert_token_b, bert_segment_b, bert_masks_b, bert_clause_b, y_mask_b)
+    #     loss_total,cml_out,eml_out = loss_calc(configs,
+    #                                             y_e_list,
+    #                                             y_c_list,
+    #                                             doc_couples_b,
+    #                                             cml_scores,
+    #                                             eml_scores,
+    #                                             sliding_mask,
+    #                                             sent_mask,
+    #                                             0,
+    #                                             training=True,
+    #                                             alter=False,
+    #                                             sent_mask_flag=True)
+    #     res = inference(configs,cml_out, eml_out, y_mask_b, mode='logic_or')
+    #     break
