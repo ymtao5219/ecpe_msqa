@@ -8,6 +8,7 @@ class Container:
     def chat(self, text_template, example, temp=0.7, n=2):
         completion = None
         if self.model == 'text-davinci-003':
+            # prompt = self.prompt_parse(text_template, example)
             prompt = self.prompt_parse(text_template, example)
             # print(prompt)
             # print(len(prompt.split()))
@@ -35,6 +36,30 @@ class Container:
             else:
                 result += prefix + str(example.fields[i]) + '\n'
             # print(example.fields[i])
+
+        return result
+    
+    def prompt_parse2(self, template, example):
+        # print(len(template.fields))
+        # print(len(example.fields))
+        assert len(template.fields) == len(example.fields)
+        result = template.instruction + '\n'
+        # result += '---\n'
+        result += example.fields[0]
+        # for i in range(len(example.fields)):
+            # prefix = template.fields[i][0] # prefix
+            # if 'Example' in prefix:
+            #     result += prefix + '[\n'
+            #     for f in example.fields[i]:
+            #         result += '{Content:' + str(f['content']) + 'Answer:' + str(f['pair']) + '}' + '\n'
+            #     result += ']\n\n'
+            #     # result += prefix + str(example.fields[i]) + '\n'
+            # else:
+            #     result += prefix + str(example.fields[i]) + '\n'
+            # # print(example.fields[i])
+        for e in template.fields:
+            result += ' '.join(e) + '\n'
+        # result += '---\n'
 
         return result
     

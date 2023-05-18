@@ -11,9 +11,11 @@ The repository contains code for CS685 NLP Project in Spring 2023 at Umass Amher
 
 We have three tasks to complete in our project proposal. We orgainize our code according to the tasks.  
 
-## Task 1: Replication of one of SOTA works
+## Task 0: Statistical analysis of the dataset
+- 'task0/distribution.ipynb': contains the statistical analysis of the dataset. 
+## Task 1: Our proposed method
 - 'task1/ECPE-MLL': contains the code of the paper. Their code is publicly availabel at: https://github.com/NUSTM/ECPE-MLL. The authors use Tensorflow 1.x and Python 2. 
-- `task1/ECPE-MLL-Pytorch`: contains our replication of the above work. 
+- `task1/ECPE-MLL-Pytorch`: contains our proposed method to solve this task 
 - The below are commands to run the code:
 ```bash
 cd task1/ECPE-MLL-Pytorch
@@ -26,7 +28,12 @@ python train.py
     
 
 ## Task 2: Evaluting the ECPE task using GPT3.5 
-- `task2/`: 
+- 'task2/zeroshot_example': contains the code for an zeroshot learning example with ChatGPT. Running the codes will save the response of ChatGPT to the text. You may need to use your own API keys to call ChatGPT.
+- The below are commands to run the code:
+```
+python zeroshot.py --api_keys <your API keys>
+```
+
 
 
 
